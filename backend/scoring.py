@@ -8,6 +8,7 @@ Basado en evidencia micológica:
 - La temperatura mínima es el factor limitante al final de temporada.
 - Las heladas fuertes cortan la fructificación de casi todas las especies,
   con excepciones según tolerancia.
+- Pocos días de lluvia penalizan el score aunque el resto de factores sean buenos.
 """
 
 
@@ -80,9 +81,9 @@ def puntuar_especie(
     # 6. Heladas (castigo proporcional a la tolerancia)
     if meteo.get("heladas_fuertes"):
         if especie["tolera_heladas"]:
-            s_helada = 0.5  # penalización parcial, no total
+            s_helada = 0.5
         else:
-            s_helada = 0.0  # corte total para especies sensibles
+            s_helada = 0.0
     else:
         s_helada = 1.0
     desglose["heladas"] = round(s_helada, 2)
@@ -94,17 +95,14 @@ def puntuar_especie(
     s_altitud = 1.0 if altitud_ok else 0.0
     desglose["altitud"] = s_altitud
 
-    # Pesos revisados según evidencia
-    # - Lluvia 20d y eventos son el desencadenante principal
-    # - T_min es limitante pero no tan importante como la lluvia
-    # - Heladas fuertes pueden anular todo
+    # Pesos revisados
     pesos = {
-        "lluvia_60d": 0.15,   # preparación del micelio
-        "lluvia_20d": 0.25,   # desencadenante principal
-        "dias_lluvia_20d": 0.15,  # importa la distribución, no solo el total
-        "t_min": 0.15,        # limitante al final de temporada
-        "t_max": 0.05,        # menos crítico
-        "heladas": 0.20,      # puede anular todo
+        "lluvia_60d": 0.10,
+        "lluvia_20d": 0.30,
+        "dias_lluvia_20d": 0.20,
+        "t_min": 0.15,
+        "t_max": 0.05,
+        "heladas": 0.15,
         "altitud": 0.05,
     }
 
@@ -118,15 +116,23 @@ def puntuar_especie(
         + pesos["altitud"] * s_altitud
     )
 
+    # Penalización multiplicativa si ha habido muy pocos días de lluvia
+    # (refleja que sin eventos suficientes la fructificación es improbable)
+    if dias < 3:
+        score *= 0.6
+
     return {
         "score": round(score, 3),
         "desglose": desglose,
-        "motivo": _motivo(desglose, especie),
+        "motivo": _motivo(desglose, especie, score),
     }
 
 
-def _motivo(desglose: dict, especie: dict) -> str:
+def _motivo(desglose: dict, especie: dict, score: float) -> str:
     """Genera una frase corta explicando el factor limitante principal."""
+    # Si el score es alto, no hace falta señalar un factor limitante
+    if score >= 0.65:
+        return "Condiciones favorables"
     if desglose["heladas"] == 0.0:
         return "Heladas fuertes recientes incompatibles con esta especie"
     if desglose["lluvia_20d"] < 0.3:
@@ -139,7 +145,7 @@ def _motivo(desglose: dict, especie: dict) -> str:
         return "Temperaturas mínimas fuera del rango óptimo"
     if desglose["t_max"] < 0.3:
         return "Temperaturas máximas fuera del rango óptimo"
-    return "Condiciones favorables"
+    return "Condiciones moderadas"
 
 
 def etiqueta(score: float) -> str:
