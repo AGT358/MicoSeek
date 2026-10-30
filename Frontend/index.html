@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+ 
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#2e7d32">
+  <title>MicoSeek — Orientación micológica</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+  <header class="cabecera">
+    <h1>🍄 MicoSeek</h1>
+    <p class="subtitulo">Orientación micológica basada en datos</p>
+  </header>
+
+  <main class="contenedor">
+
+    <!-- ESTADO 1: formulario -->
+    <section id="vista-formulario" class="tarjeta">
+      <h2>¿Dónde buscas?</h2>
+
+      <div class="acciones-ubicacion">
+        <button type="button" id="btn-mi-ubicacion" class="btn-ubicacion">
+          📍 Usar mi ubicación
+        </button>
+        <input type="text" id="ubicacion" placeholder="O escribe un municipio..." autocomplete="off">
+        <button type="button" id="btn-buscar-ubicacion" class="btn-buscar">🔍</button>
+      </div>
+
+      <div id="mapa-formulario"></div>
+
+      <p id="coords-seleccionadas" class="coords">
+        Toca el mapa para marcar el punto donde quieres buscar
+      </p>
+
+      <h2>¿Qué especies te interesan?</h2>
+
+      <input type="text" id="buscador-especies" placeholder="Filtrar especies...">
+      <div id="lista-especies" class="lista-especies"></div>
+
+      <div class="aviso-legal">
+        <strong>⚠️ Aviso importante</strong>
+        <p>Los resultados son <strong>orientativos</strong>. La fructificación depende de factores locales no
+          modelizables. MicoSeek no identifica setas ni garantiza la presencia ni la comestibilidad de las que
+          encuentres.</p>
+        <label class="checkbox-aviso">
+          <input type="checkbox" id="acepto-aviso">
+          He leído y entiendo el aviso
+        </label>
+      </div>
+
+      <button id="btn-consultar" disabled>Consultar probabilidad</button>
+    </section>
+
+    <!-- ESTADO 2: resultados -->
+    <section id="vista-resultados" class="tarjeta oculto">
+      <button id="btn-nueva" class="btn-secundario">← Nueva consulta</button>
+
+      <div id="mapa"></div>
+
+      <div class="panel-resumen">
+        <h3>📋 Resumen</h3>
+        <p id="texto-resumen">Generando resumen...</p>
+        <p id="texto-resumen">Generando resumen...</p>
+        <button type="button" id="btn-mejor-zona" class="btn-enlace oculto">
+          🎯 Ver la mejor zona en el mapa
+        </button>
+      </div>
+
+
+
+      <p class="aviso-pie">
+        ⚠️ Resultados orientativos. Nunca consumas una seta que no hayas
+        identificado presencialmente por un experto.
+      </p>
+    </section>
+
+  </main>
+
+  <!-- Overlay de carga -->
+
+  <div id="overlay-carga" class="overlay-carga oculto">
+    <div class="spinner"></div>
+    <p id="overlay-texto">Analizando la zona...</p>
+  </div>
+
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js?v=10"></script>
+</body>
+
+</html>

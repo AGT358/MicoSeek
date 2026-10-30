@@ -1,0 +1,420 @@
+:root {
+  --verde: #2e7d32;
+  --verde-oscuro: #1b5e20;
+  --amarillo: #f9a825;
+  --rojo: #c62828;
+  --fondo: #f4f1ea;
+  --texto: #2b2b2b;
+  --borde: #d8d2c4;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--fondo);
+  color: var(--texto);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cabecera {
+  text-align: center;
+  padding: 1rem 1rem 0.25rem;
+}
+
+.cabecera h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.subtitulo {
+  margin: 0.15rem 0 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.contenedor {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0.75rem;
+}
+
+.tarjeta {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.oculto {
+  display: none;
+}
+
+h2 {
+  font-size: 1rem;
+  margin: 1.25rem 0 0.5rem;
+  color: #444;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+h2:first-of-type {
+  margin-top: 0;
+}
+
+label {
+  display: block;
+  margin: 0.75rem 0 0.35rem;
+  font-weight: 600;
+}
+
+input[type="text"] {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  font-size: 16px;
+  /* evita zoom automático en iOS */
+  background: #fff;
+}
+
+/* Bloque de ubicación */
+.acciones-ubicacion {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.acciones-ubicacion #btn-mi-ubicacion {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.btn-ubicacion,
+.btn-buscar {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-ubicacion {
+  background: var(--verde);
+  color: #fff;
+}
+
+.btn-ubicacion:hover {
+  background: var(--verde-oscuro);
+}
+
+.btn-buscar {
+  background: #eee;
+  color: #333;
+  width: 52px;
+  font-size: 1.1rem;
+}
+
+#mapa-formulario {
+  height: 320px;
+  border-radius: 10px;
+  margin: 0.75rem 0 0.5rem;
+  border: 1px solid var(--borde);
+  overflow: hidden;
+}
+
+.coords {
+  font-size: 0.85rem;
+  background: #f0ede4;
+  padding: 0.5rem 0.7rem;
+  border-radius: 6px;
+  margin: 0 0 0.75rem;
+  text-align: center;
+}
+
+.coords.ok {
+  background: #e8f5e9;
+  color: var(--verde-oscuro);
+  font-weight: 600;
+}
+
+.lista-especies {
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 0.4rem;
+  margin-top: 0.4rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.especie-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.especie-item:hover {
+  background: #f0ede4;
+}
+
+.especie-item.principal {
+  background: #e8f5e9;
+  font-weight: 600;
+}
+
+.especie-item small {
+  color: #666;
+  margin-left: auto;
+  font-size: 0.8rem;
+}
+
+.aviso-legal {
+  background: #fff8e1;
+  border-left: 4px solid var(--amarillo);
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+  font-size: 0.85rem;
+}
+
+.checkbox-aviso {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.checkbox-aviso input {
+  width: 20px;
+  height: 20px;
+}
+
+button#btn-consultar {
+  margin-top: 1rem;
+  width: 100%;
+  padding: 1rem;
+  border: none;
+  border-radius: 10px;
+  background: var(--verde);
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button#btn-consultar:disabled {
+  background: #b0b0b0;
+  cursor: not-allowed;
+}
+
+.btn-secundario {
+  background: transparent;
+  color: var(--verde);
+  padding: 0.5rem 0.8rem;
+  border: 1px solid var(--verde);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  margin-bottom: 0.75rem;
+}
+
+.btn-secundario:hover {
+  background: #e8f5e9;
+}
+
+#mapa {
+  height: 60vh;
+  min-height: 320px;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+}
+
+.aviso-pie {
+  margin-top: 1rem;
+  font-size: 0.8rem;
+  color: #7a5c00;
+  background: #fff8e1;
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+}
+
+.aviso-temporada {
+  background: #fff3e0;
+  border-left: 4px solid #ef6c00;
+  padding: 0.7rem 0.9rem;
+  border-radius: 6px;
+  margin-top: 0.8rem;
+  font-size: 0.9rem;
+  color: #5a3000;
+}
+
+/* Modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 1rem;
+}
+
+.modal.oculto {
+  display: none;
+}
+
+.modal-contenido {
+  background: #fff;
+  padding: 1.25rem;
+  border-radius: 12px;
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+}
+
+.modal-contenido h3 {
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+
+.modal-botones {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+}
+
+.modal-botones button {
+  width: 100%;
+  padding: 0.85rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-primario {
+  background: var(--verde);
+  color: #fff;
+}
+
+.btn-primario:hover {
+  background: var(--verde-oscuro);
+}
+
+.modal-botones .btn-secundario {
+  background: #fff;
+  color: var(--verde);
+  border: 1px solid var(--verde);
+  margin: 0;
+}
+
+/* Ajustes para pantallas mayores */
+@media (min-width: 700px) {
+  .modal-botones {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+
+  .modal-botones button {
+    width: auto;
+    padding: 0.7rem 1.2rem;
+  }
+
+  #mapa-formulario {
+    height: 380px;
+  }
+}
+
+.overlay-carga {
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1500;
+  gap: 1rem;
+}
+
+.overlay-carga.oculto {
+  display: none;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #e0dccf;
+  border-top-color: var(--verde);
+  border-radius: 50%;
+  animation: girar 0.9s linear infinite;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.overlay-carga p {
+  font-size: 1rem;
+  color: #333;
+  margin: 0;
+  text-align: center;
+  padding: 0 1rem;
+}
+
+.btn-enlace {
+  background: transparent;
+  border: none;
+  color: var(--verde);
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0.4rem 0;
+  margin-top: 0.5rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+
+/* Contenedor del mapa para posicionar la leyenda */
+#mapa {
+  position: relative;
+}
+
+#lista-candidatas li {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--borde);
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+#lista-candidatas li:hover {
+  background: #e8f5e9;
+}
+
+#lista-candidatas li:last-child {
+  border-bottom: none;
+}
+
+.btn-enlace:hover {
+  color: var(--verde-oscuro);
+}
