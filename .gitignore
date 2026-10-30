@@ -1,0 +1,29 @@
+# Entorno virtual
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Caché de meteorología (se regenera sola)
+backend/cache_meteo/
+
+# Variables de entorno (API key de OpenAI)
+.env
+.env.local
+
+# CORINE (fichero de ~3 GB, no debe subirse)
+backend/datos/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+
+# VS Code
+.vscode/# Created by venv; see https://docs.python.org/3/library/venv.html
+*
