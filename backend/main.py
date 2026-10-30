@@ -166,8 +166,9 @@ async def consulta(c: Consulta):
 
         altitud = meteo.get("elevation")
         altitud_ok = (altitud is None) or (alt_lo <= altitud <= alt_hi)
+        mes_actual = date.today().month
 
-        res = puntuar_especie(especie, meteo, True, altitud_ok)
+        res = puntuar_especie(especie, meteo, True, altitud_ok, mes_actual)
         if res["score"] < UMBRAL_FAVORABLE:
             continue
 
