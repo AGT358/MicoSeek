@@ -72,6 +72,31 @@ def _celda_meteo(lat: float, lng: float, paso: float = 0.05) -> tuple:
     """Redondea lat/lng a una celda de ~5 km para cachear meteo."""
     return (round(lat / paso) * paso, round(lng / paso) * paso)
 
+def _especies_comparten_habitat(especie_principal_id: str, mes_actual: int) -> list[str]:
+    """
+    Devuelve los nombres comunes de las especies que:
+    - Comparten el hábitat principal de la especie consultada.
+    - Están en temporada (mes actual en meses).
+    - No son la propia especie principal.
+    """
+    principal = ESPECIES[especie_principal_id]
+    if not principal.get("habitats"):
+        return []
+    habitat_principal = principal["habitats"][0]
+
+    resultado = []
+    for eid, e in ESPECIES.items():
+        if eid == especie_principal_id:
+            continue
+        if habitat_principal not in e.get("habitats", []):
+            continue
+        meses = e.get("meses", [])
+        if meses and mes_actual not in meses:
+            continue
+        resultado.append(e["nombre"])
+    return resultado
+
+
 
 # ---------- Endpoints ----------
 @app.get("/api/especies")
@@ -205,6 +230,7 @@ async def consulta(c: Consulta):
                 "clc_code": p["clc_code"],
                 "motivo": res["motivo"],
                 "altitud": altitud,
+                "lluvia_60d": meteo["lluvia_60d"],
                 "lluvia_20d": meteo["lluvia_20d"],
                 "dias_lluvia_20d": meteo["dias_lluvia_20d"],
                 "t_min_media": meteo["t_min_media"],
@@ -242,6 +268,14 @@ async def consulta(c: Consulta):
             mejor_motivo="",
             fuera_de_temporada=False,
         )
+
+    # Añadir especies que comparten hábitat y están en temporada
+    otras = _especies_comparten_habitat(c.especie_principal, mes_actual)
+    if otras:
+        otras_txt = ", ".join(otras[:5])
+        if len(otras) > 5:
+            otras_txt += f" y {len(otras) - 5} más"
+        resumen += f" Otras especies que comparten hábitat y están en temporada: {otras_txt}."   
 
     return {
         "centro": centro,
