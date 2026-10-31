@@ -13,6 +13,7 @@ La consulta:
 5. Puntúa cada polígono y devuelve GeoJSON con los favorables.
 """
 import asyncio
+from datetime import date
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
@@ -36,6 +37,8 @@ RADIO_KM = 15.0
 CONCURRENCIA_METEO = 1
 
 
+
+
 # ---------- App ----------
 app = FastAPI(title="MicoSeek API")
 
@@ -53,14 +56,16 @@ class Consulta(BaseModel):
     lng: float
     especie_principal: str
     especies: list[str] = []
+    confirmar_temporada: bool = False
 
 
 # ---------- Utilidades ----------
-def _nombre_mes(m: int) -> str:
-    return [
+def _nombre_mes(numero: int) -> str:
+    meses = [
         "enero", "febrero", "marzo", "abril", "mayo", "junio",
-        "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
-    ][m - 1]
+        "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+    ]
+    return meses[numero - 1] if 1 <= numero <= 12 else str(numero)
 
 
 def _celda_meteo(lat: float, lng: float, paso: float = 0.05) -> tuple:
@@ -79,13 +84,32 @@ def listar_especies():
 
 @app.post("/api/consulta")
 async def consulta(c: Consulta):
-    print(f"[Main] endpoint consulta invocado, especie={c.especie_principal}, lat={c.lat}, lng={c.lng}")
+    
     if c.especie_principal not in ESPECIES:
         return {"error": "Especie no válida"}
 
     centro = (c.lat, c.lng)
     especie = ESPECIES[c.especie_principal]
     zona_txt = f"({c.lat:.3f}, {c.lng:.3f})"
+
+        # --- 0. Comprobar temporada ---
+    mes_actual = date.today().month
+    meses_especie = especie.get("meses", [])
+    en_temporada = (not meses_especie) or (mes_actual in meses_especie)
+
+    if not en_temporada and not c.confirmar_temporada:
+        return {
+            "requiere_confirmacion": True,
+            "aviso": (
+                f"{especie['nombre']} no está en su temporada habitual "
+                f"(meses típicos: {', '.join(_nombre_mes(m) for m in meses_especie)}). "
+                f"Estamos en {_nombre_mes(mes_actual)}. "
+                f"Los resultados pueden ser poco fiables."
+            ),
+            "meses_especie": meses_especie,
+            "mes_actual": mes_actual,
+            "especie_nombre": especie["nombre"],
+        }
 
     # --- 1. Polígonos de CORINE en el radio ---
     poligonos = obtener_poligonos(centro[0], centro[1], RADIO_KM)
@@ -166,8 +190,7 @@ async def consulta(c: Consulta):
 
         altitud = meteo.get("elevation")
         altitud_ok = (altitud is None) or (alt_lo <= altitud <= alt_hi)
-        mes_actual = date.today().month
-
+       
         res = puntuar_especie(especie, meteo, True, altitud_ok, mes_actual)
         if res["score"] < UMBRAL_FAVORABLE:
             continue
