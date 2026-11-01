@@ -1,16 +1,14 @@
 """
 Generación del resumen con un LLM controlado.
-
-El LLM actúa como redactor: recibe un JSON con los datos ya calculados
-y devuelve un texto natural. No puede añadir información nueva.
 """
 import httpx
 import json
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 LLM_API_KEY = os.getenv("OPENAI_API_KEY")
-
-# Configuración del LLM (OpenAI-compatible)
 LLM_API_URL = "https://api.openai.com/v1/chat/completions"
 LLM_MODEL = "gpt-4o-mini"
 
@@ -27,12 +25,6 @@ REGLAS ESTRICTAS (obligatorias):
 5. Si el JSON indica "fuera_de_temporada": true, menciona que la especie no está en su temporada habitual.
 6. Termina siempre con: "Recuerda que estos datos son orientativos."
 7. Máximo 4 frases. Tono neutral y directo.
-
-Ejemplo de salida válida:
-"Para la zona consultada y la especie Boletus pinophilus: se han identificado 12 zonas con condiciones favorables en un radio de 15 km. La mejor zona es de hábitat pinar con una probabilidad alta. Condiciones favorables. Recuerda que estos datos son orientativos."
-
-Ejemplo de salida INVÁLIDA (no la hagas):
-"¡Buenas noticias! Hay muchos boletos en la zona, sal a buscarlos." (afirma presencia y da consejo)
 """
 
 
@@ -47,11 +39,15 @@ async def generar_resumen_con_llm(
     mejor_motivo: str,
     fuera_de_temporada: bool,
     meses_especie: list[int],
+    ia_activa: bool = True,
 ) -> str | None:
     """
-    Genera el resumen con un LLM. Si falla, devuelve None para que
-    main.py use la plantilla de respaldo.
+    Genera el resumen con un LLM. Devuelve None si la IA está desactivada,
+    si no hay clave, o si falla, para que main.py use la plantilla.
     """
+    if not ia_activa:
+        print("[IA] Desactivada, usando plantilla")
+        return None
     if not LLM_API_KEY:
         print("[IA] Sin OPENAI_API_KEY, usando plantilla")
         return None
@@ -100,7 +96,6 @@ async def generar_resumen_con_llm(
 
 
 def _contiene_alucinacion(texto: str) -> bool:
-    """Detecta frases que el LLM no debería generar."""
     prohibidas = [
         "hay setas", "encontrarás setas", "puedes coger", "son comestibles",
         "sal a buscar", "abundantes setas", "muchos ejemplares",
@@ -109,13 +104,11 @@ def _contiene_alucinacion(texto: str) -> bool:
     return any(p in texto_lower for p in prohibidas)
 
 
-# ---------- Fallback: plantilla original (si el LLM falla) ----------
 def generar_resumen_plantilla(
     especie_nombre: str, zona_txt: str, num_zonas: int, radio_km: float,
     mejor_habitat: str, mejor_color: str, mejor_prob: float, mejor_motivo: str,
     fuera_de_temporada: bool,
 ) -> str:
-    """Resumen de respaldo si el LLM no está disponible."""
     if num_zonas == 0:
         txt = (
             f"Para la zona {zona_txt} y la especie {especie_nombre}: "

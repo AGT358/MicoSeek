@@ -1,24 +1,20 @@
 """
-API de MicoSeek.
+MicoSeek API — Backend FastAPI.
 
-Endpoints:
-    GET  /api/especies  → catálogo de especies
-    POST /api/consulta  → consulta por coordenadas y especie
-
-La consulta:
-1. Comprueba temporada de la especie (si no está en temporada, pide confirmación).
-2. Obtiene polígonos de CORINE en un radio alrededor del punto.
-3. Filtra por hábitat compatible con la especie.
-4. Agrupa por celda de ~5 km, pide meteo una vez por celda (en paralelo).
-5. Puntúa cada polígono y devuelve GeoJSON con los favorables.
+Integra:
+- CORINE Land Cover local (hábitat)
+- Open-Meteo con caché (lluvia y temperatura)
+- Scoring con penalización estacional
+- Filtro de temporada con confirmación
+- Resumen con plantilla o LLM (OpenAI) activable por admin
 """
+import os
 import asyncio
-from datetime import date
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -29,22 +25,21 @@ from backend.meteo import obtener_meteo
 from backend.geodatos import obtener_poligonos
 from backend.ia import generar_resumen_con_llm, generar_resumen_plantilla
 
-
 # ---------- Configuración ----------
+IA_ACTIVA = os.getenv("IA_ACTIVA", "false").lower() == "true"
+ADMIN_KEY = os.getenv("ADMIN_KEY", "micoseek-admin")
+
 MAX_POLIGONOS = 200
 UMBRAL_FAVORABLE = 0.40
 RADIO_KM = 15.0
 CONCURRENCIA_METEO = 1
-
-
-
 
 # ---------- App ----------
 app = FastAPI(title="MicoSeek API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # en producción, restringir
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -55,22 +50,26 @@ class Consulta(BaseModel):
     lat: float
     lng: float
     especie_principal: str
-    especies: list[str] = []
     confirmar_temporada: bool = False
 
 
+class ConfigIA(BaseModel):
+    activa: bool
+    admin_key: str
+
+
 # ---------- Utilidades ----------
-def _nombre_mes(numero: int) -> str:
-    meses = [
+def _nombre_mes(m: int) -> str:
+    return [
         "enero", "febrero", "marzo", "abril", "mayo", "junio",
         "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
-    ]
-    return meses[numero - 1] if 1 <= numero <= 12 else str(numero)
+    ][m - 1]
 
 
 def _celda_meteo(lat: float, lng: float, paso: float = 0.05) -> tuple:
     """Redondea lat/lng a una celda de ~5 km para cachear meteo."""
     return (round(lat / paso) * paso, round(lng / paso) * paso)
+
 
 def _especies_comparten_habitat(especie_principal_id: str, mes_actual: int) -> list[str]:
     """
@@ -97,7 +96,6 @@ def _especies_comparten_habitat(especie_principal_id: str, mes_actual: int) -> l
     return resultado
 
 
-
 # ---------- Endpoints ----------
 @app.get("/api/especies")
 def listar_especies():
@@ -107,9 +105,24 @@ def listar_especies():
     ]
 
 
+@app.get("/api/config/ia")
+def get_config_ia(admin_key: str = ""):
+    if admin_key != ADMIN_KEY:
+        return {"activa": IA_ACTIVA}
+    return {"activa": IA_ACTIVA, "tiene_clave": bool(os.getenv("OPENAI_API_KEY"))}
+
+
+@app.post("/api/config/ia")
+def set_config_ia(cfg: ConfigIA):
+    if cfg.admin_key != ADMIN_KEY:
+        raise HTTPException(403, "No autorizado")
+    global IA_ACTIVA
+    IA_ACTIVA = cfg.activa
+    return {"activa": IA_ACTIVA}
+
+
 @app.post("/api/consulta")
 async def consulta(c: Consulta):
-    
     if c.especie_principal not in ESPECIES:
         return {"error": "Especie no válida"}
 
@@ -117,7 +130,7 @@ async def consulta(c: Consulta):
     especie = ESPECIES[c.especie_principal]
     zona_txt = f"({c.lat:.3f}, {c.lng:.3f})"
 
-        # --- 0. Comprobar temporada ---
+    # --- 0. Comprobar temporada ---
     mes_actual = date.today().month
     meses_especie = especie.get("meses", [])
     en_temporada = (not meses_especie) or (mes_actual in meses_especie)
@@ -174,7 +187,7 @@ async def consulta(c: Consulta):
         celdas[_celda_meteo(p["lat"], p["lng"])].append(p)
 
     # --- 4. Pedir meteo real (caché + semáforo a 1 por el free tier) ---
-    semaforo = asyncio.Semaphore(1)
+    semaforo = asyncio.Semaphore(CONCURRENCIA_METEO)
 
     async def meteo_celda(clave):
         async with semaforo:
@@ -183,14 +196,10 @@ async def consulta(c: Consulta):
             except Exception as e:
                 print(f"[Main] Fallo meteo para {clave}: {e}")
                 return clave, None
-            
-            print(f"[Main] meteo obtenido: {sum(1 for v in meteo_por_celda.values() if v is not None)}/{len(celdas)}") # diagnostico agt
-            print(f"[Main] meteo obtenido: {sum(1 for v in meteo_por_celda.values() if v is not None)}/{len(celdas)}")
 
     resultados_meteo = await asyncio.gather(
         *[meteo_celda(k) for k in celdas.keys()]
     )
-    print(f"[Main] celdas a consultar: {len(celdas)}")
     meteo_por_celda = dict(resultados_meteo)
 
     # Fallback neutro para celdas que fallen (429, timeout, etc.)
@@ -215,7 +224,7 @@ async def consulta(c: Consulta):
 
         altitud = meteo.get("elevation")
         altitud_ok = (altitud is None) or (alt_lo <= altitud <= alt_hi)
-       
+
         res = puntuar_especie(especie, meteo, True, altitud_ok, mes_actual)
         if res["score"] < UMBRAL_FAVORABLE:
             continue
@@ -242,10 +251,10 @@ async def consulta(c: Consulta):
     features.sort(key=lambda f: f["properties"]["prob"], reverse=True)
     features = features[:MAX_POLIGONOS]
 
-    # --- 7. Resumen con plantilla (sin IA) ---
+    # --- 7. Resumen con LLM o plantilla ---
     if features:
         mejor = features[0]["properties"]
-        resumen = generar_resumen_plantilla(
+        resumen = await generar_resumen_con_llm(
             especie_nombre=especie["nombre"],
             zona_txt=zona_txt,
             num_zonas=len(features),
@@ -254,10 +263,24 @@ async def consulta(c: Consulta):
             mejor_color=mejor["color"],
             mejor_prob=mejor["prob"],
             mejor_motivo=mejor["motivo"],
-            fuera_de_temporada=False,
+            fuera_de_temporada=not en_temporada,
+            meses_especie=meses_especie,
+            ia_activa=IA_ACTIVA,
         )
+        if resumen is None:
+            resumen = generar_resumen_plantilla(
+                especie_nombre=especie["nombre"],
+                zona_txt=zona_txt,
+                num_zonas=len(features),
+                radio_km=RADIO_KM,
+                mejor_habitat=mejor["habitat"],
+                mejor_color=mejor["color"],
+                mejor_prob=mejor["prob"],
+                mejor_motivo=mejor["motivo"],
+                fuera_de_temporada=not en_temporada,
+            )
     else:
-        resumen = generar_resumen_plantilla(
+        resumen = await generar_resumen_con_llm(
             especie_nombre=especie["nombre"],
             zona_txt=zona_txt,
             num_zonas=0,
@@ -266,16 +289,30 @@ async def consulta(c: Consulta):
             mejor_color="",
             mejor_prob=0.0,
             mejor_motivo="",
-            fuera_de_temporada=False,
+            fuera_de_temporada=not en_temporada,
+            meses_especie=meses_especie,
+            ia_activa=IA_ACTIVA,
         )
+        if resumen is None:
+            resumen = generar_resumen_plantilla(
+                especie_nombre=especie["nombre"],
+                zona_txt=zona_txt,
+                num_zonas=0,
+                radio_km=RADIO_KM,
+                mejor_habitat="",
+                mejor_color="",
+                mejor_prob=0.0,
+                mejor_motivo="",
+                fuera_de_temporada=not en_temporada,
+            )
 
-    # Añadir especies que comparten hábitat y están en temporada
+    # --- 8. Añadir especies que comparten hábitat y están en temporada ---
     otras = _especies_comparten_habitat(c.especie_principal, mes_actual)
     if otras:
         otras_txt = ", ".join(otras[:5])
         if len(otras) > 5:
             otras_txt += f" y {len(otras) - 5} más"
-        resumen += f" Otras especies que comparten hábitat y están en temporada: {otras_txt}."   
+        resumen += f" Otras especies que comparten hábitat y están en temporada: {otras_txt}."
 
     return {
         "centro": centro,
@@ -284,7 +321,8 @@ async def consulta(c: Consulta):
         "resumen": resumen,
     }
 
-# ---------- Frontend estático ----------) 
+
+# ---------- Frontend estático ----------
 FRONTEND = Path(__file__).parent.parent / "frontend"
 if FRONTEND.exists():
     app.mount("/", StaticFiles(directory=FRONTEND, html=True), name="frontend")
