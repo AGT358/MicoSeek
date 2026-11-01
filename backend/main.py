@@ -9,7 +9,8 @@ Integra:
 - Resumen con plantilla o LLM (OpenAI) activable por admin
 """
 import os
-import asyncio
+import time
+import json
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
@@ -21,18 +22,21 @@ from pydantic import BaseModel
 
 from backend.especies import ESPECIES
 from backend.scoring import puntuar_especie, etiqueta
-from backend.meteo import obtener_meteo
+from backend.meteo import obtener_meteo, obtener_meteo_multiple
 from backend.geodatos import obtener_poligonos
 from backend.ia import generar_resumen_con_llm, generar_resumen_plantilla
 
 # ---------- Configuración ----------
 IA_ACTIVA = os.getenv("IA_ACTIVA", "false").lower() == "true"
 ADMIN_KEY = os.getenv("ADMIN_KEY", "micoseek-admin")
-
 MAX_POLIGONOS = 200
 UMBRAL_FAVORABLE = 0.40
 RADIO_KM = 15.0
 CONCURRENCIA_METEO = 1
+
+# Caché en memoria de respuestas de /api/consulta
+CACHE_CONSULTAS = {}  # clave: (lat_r, lng_r, especie, confirmar), valor: (timestamp, respuesta)
+CACHE_TTL_SEGUNDOS = 600  # 10 minutos
 
 # ---------- App ----------
 app = FastAPI(title="MicoSeek API")
@@ -95,6 +99,24 @@ def _especies_comparten_habitat(especie_principal_id: str, mes_actual: int) -> l
         resultado.append(e["nombre"])
     return resultado
 
+def _clave_cache(lat: float, lng: float, especie: str, confirmar: bool) -> tuple:
+    """Redondea lat/lng a 0.01° (~1 km) para agrupar consultas cercanas."""
+    return (round(lat, 2), round(lng, 2), especie, confirmar)
+
+
+def _leer_cache(clave: tuple):
+    entrada = CACHE_CONSULTAS.get(clave)
+    if not entrada:
+        return None
+    ts, respuesta = entrada
+    if time.time() - ts > CACHE_TTL_SEGUNDOS:
+        del CACHE_CONSULTAS[clave]
+        return None
+    return respuesta
+
+
+def _escribir_cache(clave: tuple, respuesta: dict):
+    CACHE_CONSULTAS[clave] = (time.time(), respuesta)
 
 # ---------- Endpoints ----------
 @app.get("/api/especies")
@@ -120,6 +142,14 @@ def set_config_ia(cfg: ConfigIA):
     IA_ACTIVA = cfg.activa
     return {"activa": IA_ACTIVA}
 
+@app.post("/api/config/cache/clear")
+def clear_cache(admin_key: str = ""):
+    if admin_key != ADMIN_KEY:
+        raise HTTPException(403, "No autorizado")
+    global CACHE_CONSULTAS
+    CACHE_CONSULTAS = {}
+    return {"ok": True, "mensaje": "Caché limpiada"}
+
 
 @app.post("/api/consulta")
 async def consulta(c: Consulta):
@@ -129,6 +159,16 @@ async def consulta(c: Consulta):
     centro = (c.lat, c.lng)
     especie = ESPECIES[c.especie_principal]
     zona_txt = f"({c.lat:.3f}, {c.lng:.3f})"
+
+    clave_cache = _clave_cache(c.lat, c.lng, c.especie_principal, c.confirmar_temporada)
+    cacheado = _leer_cache(clave_cache)
+    if cacheado is not None:
+        print(f"[Cache] HIT para {clave_cache}")
+        return cacheado
+
+
+
+
 
     # --- 0. Comprobar temporada ---
     mes_actual = date.today().month
@@ -187,22 +227,15 @@ async def consulta(c: Consulta):
         celdas[_celda_meteo(p["lat"], p["lng"])].append(p)
 
     # --- 4. Pedir meteo real (caché + semáforo a 1 por el free tier) ---
-    semaforo = asyncio.Semaphore(CONCURRENCIA_METEO)
+        # --- 4. Pedir meteo real en una sola petición (agrupando coordenadas) ---
+    coordenadas = list(celdas.keys())
+    try:
+        meteo_por_celda = await obtener_meteo_multiple(coordenadas)
+    except Exception as e:
+        print(f"[Main] Fallo meteo múltiple: {e}")
+        meteo_por_celda = {}
 
-    async def meteo_celda(clave):
-        async with semaforo:
-            try:
-                return clave, await obtener_meteo(clave[0], clave[1])
-            except Exception as e:
-                print(f"[Main] Fallo meteo para {clave}: {e}")
-                return clave, None
-
-    resultados_meteo = await asyncio.gather(
-        *[meteo_celda(k) for k in celdas.keys()]
-    )
-    meteo_por_celda = dict(resultados_meteo)
-
-    # Fallback neutro para celdas que fallen (429, timeout, etc.)
+    # Fallback neutro para celdas que falten
     METEO_NEUTRO = {
         "lluvia_60d": 120.0,
         "lluvia_20d": 40.0,
@@ -212,7 +245,6 @@ async def consulta(c: Consulta):
         "heladas_fuertes": False,
         "elevation": None,
     }
-
     # --- 5. Puntuar cada polígono ---
     features = []
     alt_lo, alt_hi = especie["altitud"]
@@ -314,12 +346,16 @@ async def consulta(c: Consulta):
             otras_txt += f" y {len(otras) - 5} más"
         resumen += f" Otras especies que comparten hábitat y están en temporada: {otras_txt}."
 
-    return {
+     
+
+    respuesta = {
         "centro": centro,
         "especie_principal": c.especie_principal,
         "geojson": {"type": "FeatureCollection", "features": features},
         "resumen": resumen,
     }
+    _escribir_cache(clave_cache, respuesta)
+    return respuesta
 
 
 # ---------- Frontend estático ----------
