@@ -58,7 +58,7 @@ ESPECIES = {
         "t_max_optima": (8, 18),
         "tolera_heladas": True,
         "termofila": False,
-        "meses": [10, 11, 12, 1, 2, 3],
+        "meses": [10, 11, 12, 1, 2, 3,4],
         "temporada": {"inicio": [10], "plena": [11, 12, 1], "final": [2, 3]},
     },
     "tricholoma_terreum": {
