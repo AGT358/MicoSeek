@@ -52,7 +52,7 @@ body {
 }
 
 .oculto {
-  display: none;
+  display: none !important;
 }
 
 h2 {
@@ -417,4 +417,84 @@ button#btn-consultar:disabled {
 
 .btn-enlace:hover {
   color: var(--verde-oscuro);
+}
+
+/* Modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+.modal.oculto { display: none; }
+.modal-contenido {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+}
+.modal-contenido h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1.15rem;
+}
+.modal-contenido p {
+  margin: 0 0 1.25rem;
+  line-height: 1.5;
+  color: #444;
+}
+.modal-botones {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+.modal-botones button {
+  width: auto;
+  margin: 0;
+  padding: 0.6rem 1.2rem;
+}
+#btn-cancelar-temporada {
+  background: transparent;
+  color: var(--verde);
+  border: 1px solid var(--verde);
+}
+#btn-cancelar-temporada:hover {
+  background: #e8f5e9;
+}
+
+#selector-especie {
+  width: 100%;
+  padding: 0.6rem;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  font-size: 1rem;
+  background: #fff;
+  margin-bottom: 0.5rem;
+}
+
+.toggle-ia {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  background: #fff;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  border: 1px solid var(--borde);
+}
+.toggle-ia input {
+  width: auto;
+  margin: 0;
+}
+.toggle-ia input:disabled + span,
+.toggle-ia input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
