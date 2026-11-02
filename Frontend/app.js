@@ -249,10 +249,13 @@ function mostrarResultados(datos, punto) {
           '<div style="min-width:180px">' +
             '<strong style="text-transform:capitalize">' + p.habitat + '</strong><br>' +
             '<span style="color:#2e7d32;font-weight:600">' + colorTxt + '</span> - ' + pct + '%<br>' +
+            
             '<hr style="margin:6px 0;border:none;border-top:1px solid #ddd">' +
+            'Lluvia ultimos 2 meses: <strong>' + (p.lluvia_60d != null ? p.lluvia_60d : "-") + ' mm</strong><br>' +
             'Lluvia ultimos 20 dias: <strong>' + (p.lluvia_20d != null ? p.lluvia_20d : "-") + ' mm</strong><br>' +
-            'Temperatura minima ultimos 20 dias: <strong>' + (p.t_min_media != null ? p.t_min_media : "-") + ' C</strong><br>' +
             'Dias de lluvia (20d): <strong>' + (p.dias_lluvia_20d != null ? p.dias_lluvia_20d : "-") + '</strong><br>' +
+            'Temperatura minima ultimos 20 dias: <strong>' + (p.t_min_media != null ? p.t_min_media : "-") + ' C</strong><br>' +
+           
             'Heladas fuertes: <strong>' + (p.heladas_fuertes ? "Si" : "No") + '</strong><br>' +
             (p.altitud ? 'Altitud: <strong>' + Math.round(p.altitud) + ' m</strong><br>' : '') +
             '<em style="color:#666;font-size:0.85em">' + (p.motivo || '') + '</em>' +
