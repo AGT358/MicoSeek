@@ -17,6 +17,18 @@ const acepto = $("acepto-aviso");
 const vistaFormulario = $("vista-formulario");
 const vistaResultados = $("vista-resultados");
 
+// Cargar la clave de Tracestrack desde el backend
+let TRACESTRACK_KEY = "";
+async function cargarConfigMapas() {
+  try {
+    const resp = await fetch("/api/config/mapas");
+    const cfg = await resp.json();
+    TRACESTRACK_KEY = cfg.tracestrack_key || "";
+  } catch (e) {
+    console.error("No se pudo cargar la config de mapas:", e);
+  }
+}
+
 // ---------- Carga de especies ----------
 async function cargarEspecies() {
   try {
@@ -173,7 +185,7 @@ async function consultarBackend(lat, lng, principal) {
     try {
       const err = await resp.json();
       detalle = err.detail || err.error || detalle;
-    } catch (_) {}
+    } catch (_) { }
     throw new Error(detalle);
   }
   return await resp.json();
@@ -216,6 +228,7 @@ btnConsultar.addEventListener("click", async () => {
 });
 
 // ---------- Resultados ----------
+
 function mostrarResultados(datos, punto) {
   vistaFormulario.classList.add("oculto");
   vistaResultados.classList.remove("oculto");
@@ -224,18 +237,23 @@ function mostrarResultados(datos, punto) {
   mapa = L.map("mapa", { zoomControl: true, scrollWheelZoom: true })
     .setView(datos.centro || [punto.lat, punto.lng], 11);
 
-      const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: "OpenStreetMap",
     maxZoom: 19,
   }).addTo(mapa);
 
-  const cyclosm = L.tileLayer("https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png", {
-    attribution: "CyclOSM (CC-BY-SA)",
-    maxZoom: 19,
+  const topo = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+    attribution: "OpenTopoMap (CC-BY-SA)",
+    maxZoom: 17,
+  });
+
+  const tracestrack = L.tileLayer("/api/tiles/tracestrack/{z}/{x}/{y}.png", {
+    attribution: "Tracestrack",
+    maxZoom: 17,
   });
 
   L.control.layers(
-    { "Calles (OSM)": osm, "Ciclismo (CyclOSM)": cyclosm },
+    { "Calles (OSM)": osm, "Topografico": topo, "Tracestrack Topo": tracestrack },
     null,
     { position: "topright" }
   ).addTo(mapa);
@@ -251,7 +269,7 @@ function mostrarResultados(datos, punto) {
     L.geoJSON(datos.geojson, {
       style: function (feature) {
         const p = PALETA[feature.properties.color] || { fill: "#888", stroke: "#555" };
-        return { color: p.stroke, weight: 1.5, fillColor: p.fill, fillOpacity: 0.35 };
+        return { color: p.stroke, weight: 1.5, fillColor: p.fill, fillOpacity: 0.10 };
       },
       onEachFeature: function (feature, layer) {
         const p = feature.properties;
@@ -259,22 +277,22 @@ function mostrarResultados(datos, punto) {
         const colorTxt = p.color === "verde" ? "Alta" : "Media";
         const popupHtml =
           '<div style="min-width:180px">' +
-            '<strong style="text-transform:capitalize">' + p.habitat + '</strong><br>' +
-            '<span style="color:#2e7d32;font-weight:600">' + colorTxt + '</span> - ' + pct + '%<br>' +
-            
-            '<hr style="margin:6px 0;border:none;border-top:1px solid #ddd">' +
-            'Lluvia ultimos 2 meses: <strong>' + (p.lluvia_60d != null ? p.lluvia_60d : "-") + ' mm</strong><br>' +
-            'Lluvia ultimos 20 dias: <strong>' + (p.lluvia_20d != null ? p.lluvia_20d : "-") + ' mm</strong><br>' +
-            'Dias de lluvia (20d): <strong>' + (p.dias_lluvia_20d != null ? p.dias_lluvia_20d : "-") + '</strong><br>' +
-            'Temperatura minima ultimos 20 dias: <strong>' + (p.t_min_media != null ? p.t_min_media : "-") + ' C</strong><br>' +
-           
-            'Heladas fuertes: <strong>' + (p.heladas_fuertes ? "Si" : "No") + '</strong><br>' +
-            (p.altitud ? 'Altitud: <strong>' + Math.round(p.altitud) + ' m</strong><br>' : '') +
-            '<em style="color:#666;font-size:0.85em">' + (p.motivo || '') + '</em>' +
+          '<strong style="text-transform:capitalize">' + p.habitat + '</strong><br>' +
+          '<span style="color:#2e7d32;font-weight:600">' + colorTxt + '</span> - ' + pct + '%<br>' +
+
+          '<hr style="margin:6px 0;border:none;border-top:1px solid #ddd">' +
+          'Lluvia ultimos 2 meses: <strong>' + (p.lluvia_60d != null ? p.lluvia_60d : "-") + ' mm</strong><br>' +
+          'Lluvia ultimos 20 dias: <strong>' + (p.lluvia_20d != null ? p.lluvia_20d : "-") + ' mm</strong><br>' +
+          'Dias de lluvia (20d): <strong>' + (p.dias_lluvia_20d != null ? p.dias_lluvia_20d : "-") + '</strong><br>' +
+          'Temperatura minima ultimos 20 dias: <strong>' + (p.t_min_media != null ? p.t_min_media : "-") + ' C</strong><br>' +
+
+          'Heladas fuertes: <strong>' + (p.heladas_fuertes ? "Si" : "No") + '</strong><br>' +
+          (p.altitud ? 'Altitud: <strong>' + Math.round(p.altitud) + ' m</strong><br>' : '') +
+          '<em style="color:#666;font-size:0.85em">' + (p.motivo || '') + '</em>' +
           '</div>';
         layer.bindPopup(popupHtml);
-        layer.on("mouseover", function () { layer.setStyle({ weight: 3, fillOpacity: 0.5 }); });
-        layer.on("mouseout", function () { layer.setStyle({ weight: 1.5, fillOpacity: 0.35 }); });
+        layer.on("mouseover", function () { layer.setStyle({ weight: 2, fillOpacity: 0.30 }); });
+        layer.on("mouseout", function () { layer.setStyle({ weight: 1.5, fillOpacity: 0.10 }); });
       },
     }).addTo(capaResultados);
 

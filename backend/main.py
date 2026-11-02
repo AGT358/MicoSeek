@@ -10,12 +10,14 @@ Integra:
 """
 import os
 import time
+import httpx
 import json
+
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -33,6 +35,7 @@ MAX_POLIGONOS = 200
 UMBRAL_FAVORABLE = 0.40
 RADIO_KM = 15.0
 CONCURRENCIA_METEO = 1
+TRACESTRACK_KEY = os.getenv("TRACESTRACK_KEY", "")
 
 # Caché en memoria de respuestas de /api/consulta
 CACHE_CONSULTAS = {}  # clave: (lat_r, lng_r, especie, confirmar), valor: (timestamp, respuesta)
@@ -125,6 +128,10 @@ def listar_especies():
         {"id": k, "nombre": v["nombre"], "cientifico": v["cientifico"]}
         for k, v in ESPECIES.items()
     ]
+
+@app.get("/api/config/mapas")
+def get_config_mapas():
+    return {"tracestrack_key": os.getenv("TRACESTRACK_KEY", "")}
 
 
 @app.get("/api/config/ia")
@@ -356,6 +363,17 @@ async def consulta(c: Consulta):
     }
     _escribir_cache(clave_cache, respuesta)
     return respuesta
+
+@app.get("/api/tiles/tracestrack/{z}/{x}/{y}.png")
+async def proxy_tracestrack(z: int, x: int, y: int):
+    if not TRACESTRACK_KEY:
+        raise HTTPException(500, "Tracestrack key no configurada")
+    url = f"https://tile.tracestrack.com/topo__/{z}/{x}/{y}@1x.png?key={TRACESTRACK_KEY}"
+    async with httpx.AsyncClient(timeout=10) as client:
+        r = await client.get(url)
+        if r.status_code != 200:
+            raise HTTPException(r.status_code, "Error al obtener la tesela")
+        return Response(content=r.content, media_type="image/png")
 
 
 # ---------- Frontend estático ----------
