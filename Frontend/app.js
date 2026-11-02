@@ -224,18 +224,18 @@ function mostrarResultados(datos, punto) {
   mapa = L.map("mapa", { zoomControl: true, scrollWheelZoom: true })
     .setView(datos.centro || [punto.lat, punto.lng], 11);
 
-    const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: "OpenStreetMap",
     maxZoom: 19,
   }).addTo(mapa);
 
-  const topo = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
-    attribution: "OpenTopoMap (CC-BY-SA)",
-    maxZoom: 17,
+  const cyclosm = L.tileLayer("https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png", {
+    attribution: "CyclOSM (CC-BY-SA)",
+    maxZoom: 19,
   });
 
   L.control.layers(
-    { "Calles (OSM)": osm, "Topografico": topo },
+    { "Calles (OSM)": osm, "Ciclismo (CyclOSM)": cyclosm },
     null,
     { position: "topright" }
   ).addTo(mapa);
