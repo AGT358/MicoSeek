@@ -54,6 +54,7 @@ function inicializarMapaFormulario() {
     center: [40.4168, -3.7038],
     zoom: 6,
   });
+
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: "OpenStreetMap",
     maxZoom: 19,
@@ -223,10 +224,21 @@ function mostrarResultados(datos, punto) {
   mapa = L.map("mapa", { zoomControl: true, scrollWheelZoom: true })
     .setView(datos.centro || [punto.lat, punto.lng], 11);
 
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: "OpenStreetMap",
     maxZoom: 19,
   }).addTo(mapa);
+
+  const topo = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+    attribution: "OpenTopoMap (CC-BY-SA)",
+    maxZoom: 17,
+  });
+
+  L.control.layers(
+    { "Calles (OSM)": osm, "Topografico": topo },
+    null,
+    { position: "topright" }
+  ).addTo(mapa);
 
   capaResultados = L.featureGroup().addTo(mapa);
 
