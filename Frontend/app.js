@@ -275,16 +275,17 @@ function mostrarResultados(datos, punto) {
 
   capaResultados = L.featureGroup().addTo(mapa);
 
-  const PALETA = {
-    verde: { fill: "#2e7d32", stroke: "#1b5e20" },
-    amarillo: { fill: "#f9a825", stroke: "#f57f17" },
+    const PALETA = {
+    verde: { fill: "#58e617", stroke: "#58e617" },     // azul fosforito claro (Alta)
+    amarillo: { fill: "#FFA500", stroke: "#CC8400" },  // naranja fosforito claro (Media)
+    rojo: { fill: "#FF0000", stroke: "#CC0000" },      // rojo (Baja)
   };
 
   if (datos.geojson && datos.geojson.features && datos.geojson.features.length > 0) {
     L.geoJSON(datos.geojson, {
       style: function (feature) {
         const p = PALETA[feature.properties.color] || { fill: "#888", stroke: "#555" };
-        return { color: p.stroke, weight: 1, fillColor: p.fill, fillOpacity: 0.10 };
+        return { color: p.stroke, weight: 3, fillColor: p.fill, fillOpacity: 0.35 };
       },
       onEachFeature: function (feature, layer) {
         const p = feature.properties;
@@ -306,8 +307,8 @@ function mostrarResultados(datos, punto) {
           '<em style="color:#666;font-size:0.85em">' + (p.motivo || '') + '</em>' +
           '</div>';
         layer.bindPopup(popupHtml);
-        layer.on("mouseover", function () { layer.setStyle({ weight: 1.5, fillOpacity: 0. }); });
-        layer.on("mouseout", function () { layer.setStyle({ weight: 1, fillOpacity: 0.10 }); });
+        layer.on("mouseover", function () { layer.setStyle({ weight: 2, fillOpacity: 0.20 }); });
+        layer.on("mouseout", function () { layer.setStyle({ weight: 3, fillOpacity: 0.35 }); });
       },
     }).addTo(capaResultados);
 
