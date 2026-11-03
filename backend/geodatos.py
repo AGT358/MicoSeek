@@ -35,43 +35,40 @@ def _bbox_en_utm(lat: float, lng: float, radio_m: float = 1500) -> tuple:
     return (x - radio_m, y - radio_m, x + radio_m, y + radio_m)
 
 
-def obtener_habitat(lat: float, lng: float) -> dict:
-    gdf = pyogrio.read_dataframe(
-        CLC_PATH,
-        layer=CLC_LAYER,
-        bbox=_bbox_en_utm(lat, lng),
-        columns=["CODE_18", "AREA_HA", "geometry"],
-    )
+# def obtener_habitat(lat: float, lng: float) -> dict:
+#     gdf = pyogrio.read_dataframe(
+#         CLC_PATH,
+#         layer=CLC_LAYER,
+#         bbox=_bbox_en_utm(lat, lng),
+#         columns=["CODE_18", "AREA_HA", "geometry"],
+#     )
 
-    if gdf.empty:
-        return {"habitat": "desconocido", "clc_code": None, "area_ha": None}
+#     if gdf.empty:
+#         return {"habitat": "desconocido", "clc_code": None, "area_ha": None}
 
-    x, y = _transformer.transform(lng, lat)
-    punto = gpd.points_from_xy([x], [y])[0]
+#     x, y = _transformer.transform(lng, lat)
+#     punto = gpd.points_from_xy([x], [y])[0]
 
-    contiene = gdf[gdf.contains(punto)]
+#     contiene = gdf[gdf.contains(punto)]
 
-    if contiene.empty:
-        idx = gdf.distance(punto).idxmin()
-        fila = gdf.loc[idx]
-    else:
-        fila = contiene.iloc[0]
+#     if contiene.empty:
+#         idx = gdf.distance(punto).idxmin()
+#         fila = gdf.loc[idx]
+#     else:
+#         fila = contiene.iloc[0]
 
-    codigo = str(fila["CODE_18"])
-    return {
-        "habitat": CLC_A_HABITAT.get(codigo[:3], "desconocido"),
-        "clc_code": codigo,
-        "area_ha": float(fila["AREA_HA"]),
-    }
-    """
+#     codigo = str(fila["CODE_18"])
+#     return {
+#         "habitat": CLC_A_HABITAT.get(codigo[:3], "desconocido"),
+#         "clc_code": codigo,
+#         "area_ha": float(fila["AREA_HA"]),
+#     }
+"""
 Consulta local de CORINE Land Cover 2018.
 - obtener_habitat(lat, lng): hábitat para un punto.
 - obtener_poligonos(lat, lng, radio_km): polígonos en un área.
 """
-from pathlib import Path
-import pyogrio
-import geopandas as gpd
-from pyproj import Transformer
+
 
 CLC_PATH = Path(__file__).parent / "datos" / "CLC2018_GPKG" / "CLC2018_ES.gpkg"
 CLC_LAYER = "CLC18_ES"

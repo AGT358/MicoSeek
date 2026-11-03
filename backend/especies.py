@@ -6,7 +6,7 @@ Los valores son orientativos: ajústalos con bibliografía y campo.
 ESPECIES = {
     # ========== ESPECIES EXISTENTES (completadas) ==========
     "boletus_edulis": {
-        "nombre": "Hongo",
+        "nombre": "Boletus edulis",
         "cientifico": "Boletus edulis",
         "habitats": ["pinar", "hayedo", "robledal", "mixto"],
         "altitud": (600, 1800),

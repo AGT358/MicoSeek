@@ -236,15 +236,24 @@ function mostrarResultados(datos, punto) {
   if (mapa) mapa.remove();
   mapa = L.map("mapa", { zoomControl: true, scrollWheelZoom: true })
     .setView(datos.centro || [punto.lat, punto.lng], 11);
-
+  
   const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: "OpenStreetMap",
     maxZoom: 19,
   }).addTo(mapa);
 
+  const pnoa = L.tileLayer.wms("https://www.ign.es/wms-inspire/pnoa-ma", {
+    layers: "OI.OrthoimageCoverage",
+    format: "image/jpeg",
+    transparent: false,
+    attribution: "PNOA © Instituto Geográfico Nacional",
+    maxZoom: 19,
+  });
+  console.log("PNOA layer:", pnoa);
+
   const topo = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
     attribution: "OpenTopoMap (CC-BY-SA)",
-    maxZoom: 17,
+    maxZoom: 18,
   });
 
   const tracestrack = L.tileLayer("/api/tiles/tracestrack/{z}/{x}/{y}.png", {
@@ -252,11 +261,17 @@ function mostrarResultados(datos, punto) {
     maxZoom: 17,
   });
 
+  
   L.control.layers(
-    { "Calles (OSM)": osm, "Topografico": topo, "Tracestrack Topo": tracestrack },
-    null,
-    { position: "topright" }
-  ).addTo(mapa);
+  {
+    " OSM": osm,
+    "Topográfico": topo,
+    "Tracestrack": tracestrack,
+    "Ortofoto (PNOA)": pnoa,  // <-- Debe estar aquí
+  },
+  null,
+  { position: "topright" }
+).addTo(mapa);
 
   capaResultados = L.featureGroup().addTo(mapa);
 
@@ -269,7 +284,7 @@ function mostrarResultados(datos, punto) {
     L.geoJSON(datos.geojson, {
       style: function (feature) {
         const p = PALETA[feature.properties.color] || { fill: "#888", stroke: "#555" };
-        return { color: p.stroke, weight: 1.5, fillColor: p.fill, fillOpacity: 0.10 };
+        return { color: p.stroke, weight: 1, fillColor: p.fill, fillOpacity: 0.10 };
       },
       onEachFeature: function (feature, layer) {
         const p = feature.properties;
@@ -277,8 +292,8 @@ function mostrarResultados(datos, punto) {
         const colorTxt = p.color === "verde" ? "Alta" : "Media";
         const popupHtml =
           '<div style="min-width:180px">' +
-          '<strong style="text-transform:capitalize">' + p.habitat + '</strong><br>' +
-          '<span style="color:#2e7d32;font-weight:600">' + colorTxt + '</span> - ' + pct + '%<br>' +
+          'Hábitat: <strong style="text-transform:capitalize">' + p.habitat + '</strong><br>' +
+          'Probabilidad: <span style="color:#2e7d32;font-weight:600">' + colorTxt + '</span> - ' + pct + '%<br>' +
 
           '<hr style="margin:6px 0;border:none;border-top:1px solid #ddd">' +
           'Lluvia ultimos 2 meses: <strong>' + (p.lluvia_60d != null ? p.lluvia_60d : "-") + ' mm</strong><br>' +
@@ -291,8 +306,8 @@ function mostrarResultados(datos, punto) {
           '<em style="color:#666;font-size:0.85em">' + (p.motivo || '') + '</em>' +
           '</div>';
         layer.bindPopup(popupHtml);
-        layer.on("mouseover", function () { layer.setStyle({ weight: 2, fillOpacity: 0.30 }); });
-        layer.on("mouseout", function () { layer.setStyle({ weight: 1.5, fillOpacity: 0.10 }); });
+        layer.on("mouseover", function () { layer.setStyle({ weight: 1.5, fillOpacity: 0. }); });
+        layer.on("mouseout", function () { layer.setStyle({ weight: 1, fillOpacity: 0.10 }); });
       },
     }).addTo(capaResultados);
 
