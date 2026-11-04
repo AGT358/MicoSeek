@@ -18,6 +18,8 @@ ESPECIES = {
         "termofila": True,
         "meses": [8, 9, 10, 11],
         "temporada": {"inicio": [8], "plena": [9, 10], "final": [11]},
+        "geologia_optima": ["siliceo"], # prefiere suelos ácidos
+
     },
     "amanita_caesarea": {
         "nombre": "Oronja",
@@ -32,6 +34,7 @@ ESPECIES = {
         "termofila": True,
         "meses": [6, 7, 8, 9, 10],
         "temporada": {"inicio": [6, 7], "plena": [8, 9], "final": [10]},
+        "geologia_optima": ["calizo"],
     },
     "lactarius_deliciosus": {
         "nombre": "Níscalo",
@@ -46,6 +49,7 @@ ESPECIES = {
         "termofila": False,
         "meses": [9, 10, 11, 12],
         "temporada": {"inicio": [9], "plena": [10, 11], "final": [12]},
+        "geologia_optima": ["calizo", "siliceo", "mixto"],  # tolera ambos, mejor calizo
     },
     "pleurotus_eryngii": {
         "nombre": "Seta de cardo",
@@ -60,8 +64,9 @@ ESPECIES = {
         "termofila": False,
         "meses": [10, 11, 12, 1, 2, 3,4],
         "temporada": {"inicio": [10], "plena": [11, 12, 1], "final": [2, 3]},
+        "geologia_optima": ["calizo", "mixto"],
     },
-    "tricholoma_terreum": {
+    "tricholoma_terreum":{
         "nombre": "Negrilla",
         "cientifico": "Tricholoma terreum",
         "habitats": ["pinar"],
@@ -74,6 +79,7 @@ ESPECIES = {
         "termofila": False,
         "meses": [9, 10, 11, 12],
         "temporada": {"inicio": [9], "plena": [10, 11], "final": [12]},
+        "geologia_optima": ["calizo", "siliceo", "mixto"],
     },
     "amanita_ponderosa": {
         "nombre": "Gurumelo",
@@ -88,6 +94,7 @@ ESPECIES = {
         "termofila": True,
         "meses": [2, 3, 4, 5],
         "temporada": {"inicio": [2], "plena": [3, 4], "final": [5]},
+        "geologia_optima": ["calizo"],
     },
     "cantharellus_cibarius": {
         "nombre": "Rebozuelo",
@@ -102,6 +109,7 @@ ESPECIES = {
         "termofila": True,
         "meses": [5, 6, 9, 10, 11],
         "temporada": {"inicio": [5, 6], "plena": [9, 10], "final": [11]},
+        "geologia_optima": ["calizo", "siliceo", "mixto"],
     },
     "macrolepiota_procera": {
         "nombre": "Parasol",
@@ -116,6 +124,7 @@ ESPECIES = {
         "termofila": True,
         "meses": [6, 7, 8, 9, 10, 11],
         "temporada": {"inicio": [6, 7], "plena": [8, 9, 10], "final": [11]},
+        "geologia_optima": ["calizo", "mixto"],
     },
     "boletus_pinophilus": {
         "nombre": "Boleto pinícola",
@@ -130,6 +139,7 @@ ESPECIES = {
         "termofila": True,
         "meses": [4, 5, 9, 10, 11],
         "temporada": {"inicio": [4, 5, 9], "plena": [10], "final": [11]},
+        "geologia_optima": ["siliceo"],
     },
     "calocybe_gambosa": {
         "nombre": "Perrochico",
@@ -144,6 +154,7 @@ ESPECIES = {
         "termofila": False,
         "meses": [3, 4, 5, 6],
         "temporada": {"inicio": [3], "plena": [4, 5], "final": [6]},
+        "geologia_optima": ["calizo", "mixto"],
     },
 
     # ========== ESPECIES NUEVAS ==========
@@ -160,6 +171,7 @@ ESPECIES = {
         "termofila": False,
         "meses": [9, 10, 11],
         "temporada": {"inicio": [9], "plena": [10, 11], "final": []},
+        "geologia_optima": ["calizo", "siliceo", "mixto"],
     },
     "hydnum_repandum": {
         "nombre": "Lengua de vaca",
@@ -174,6 +186,7 @@ ESPECIES = {
         "termofila": False,
         "meses": [9, 10, 11, 12],
         "temporada": {"inicio": [9], "plena": [10, 11], "final": [12]},
+        "geologia_optima": ["calizo", "siliceo", "mixto"],
     },
     "tricholoma_portentosum": {
         "nombre": "Capuchina",
@@ -188,6 +201,7 @@ ESPECIES = {
         "termofila": False,
         "meses": [10, 11, 12],
         "temporada": {"inicio": [10], "plena": [11], "final": [12]},
+        "geologia_optima": ["calizo", "siliceo", "mixto"],
     },
     "agrocybe_aegerita": {
         "nombre": "Seta de chopo",
@@ -202,6 +216,7 @@ ESPECIES = {
         "termofila": True,
         "meses": [4, 5, 6, 9, 10, 11],
         "temporada": {"inicio": [4, 5, 9], "plena": [6, 10], "final": [11]},
+        "geologia_optima": ["calizo", "siliceo", "mixto"],
     },
     "morchella_esculenta": {
         "nombre": "Colmenilla",
@@ -216,6 +231,7 @@ ESPECIES = {
         "termofila": False,
         "meses": [3, 4, 5],
         "temporada": {"inicio": [3], "plena": [4], "final": [5]},
+        "geologia_optima": ["calizo", "siliceo", "mixto"],
     },
     "tuber_melanosporum": {
         "nombre": "Trufa negra",
@@ -230,6 +246,7 @@ ESPECIES = {
         "termofila": False,
         "meses": [11, 12, 1, 2, 3],
         "temporada": {"inicio": [11], "plena": [12, 1, 2], "final": [3]},
+        "geologia_optima": ["calizo"],
     },
     "craterellus_cornucopioides": {
         "nombre": "Trompeta de los muertos",
@@ -244,6 +261,7 @@ ESPECIES = {
         "termofila": False,
         "meses": [10, 11, 12],
         "temporada": {"inicio": [10], "plena": [11], "final": [12]},
+        "geologia_optima": ["calizo",  "mixto"],
     },
     "clitocybe_geotropa": {
         "nombre": "Platera",
@@ -258,5 +276,6 @@ ESPECIES = {
         "termofila": False,
         "meses": [10, 11, 12],
         "temporada": {"inicio": [10], "plena": [11], "final": [12]},
+        "geologia_optima": ["calizo",  "mixto"],
     },
 }

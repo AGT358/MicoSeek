@@ -12,6 +12,7 @@ import os
 import time
 import httpx
 import json
+import asyncio
 
 from collections import defaultdict
 from datetime import date
@@ -27,6 +28,7 @@ from backend.scoring import puntuar_especie, etiqueta
 from backend.meteo import obtener_meteo, obtener_meteo_multiple
 from backend.geodatos import obtener_poligonos
 from backend.ia import generar_resumen_con_llm, generar_resumen_plantilla
+from backend.geologia import obtener_geologia
 
 # ---------- Configuración ----------
 IA_ACTIVA = os.getenv("IA_ACTIVA", "false").lower() == "true"
@@ -234,7 +236,7 @@ async def consulta(c: Consulta):
         celdas[_celda_meteo(p["lat"], p["lng"])].append(p)
 
     # --- 4. Pedir meteo real (caché + semáforo a 1 por el free tier) ---
-        # --- 4. Pedir meteo real en una sola petición (agrupando coordenadas) ---
+    # --- 4. Pedir meteo real en una sola petición (agrupando coordenadas) ---
     coordenadas = list(celdas.keys())
     try:
         meteo_por_celda = await obtener_meteo_multiple(coordenadas)
@@ -252,6 +254,21 @@ async def consulta(c: Consulta):
         "heladas_fuertes": False,
         "elevation": None,
     }
+
+    # Obtener geología por celda (con caché)
+    semaforo_geo = asyncio.Semaphore(2)
+
+    async def geo_celda(clave):
+        async with semaforo_geo:
+            try:
+                return clave, await obtener_geologia(clave[0], clave[1])
+            except Exception as e:
+                print(f"[Main] Fallo geologia para {clave}: {e}")
+                return clave, None
+
+    resultados_geo = await asyncio.gather(*[geo_celda(k) for k in celdas.keys()])
+    geologia_por_celda = dict(resultados_geo)
+
     # --- 5. Puntuar cada polígono ---
     features = []
     alt_lo, alt_hi = especie["altitud"]
@@ -263,8 +280,9 @@ async def consulta(c: Consulta):
 
         altitud = meteo.get("elevation")
         altitud_ok = (altitud is None) or (alt_lo <= altitud <= alt_hi)
-
-        res = puntuar_especie(especie, meteo, True, altitud_ok, mes_actual)
+        
+        geologia = geologia_por_celda.get(_celda_meteo(p["lat"], p["lng"]))
+        res = puntuar_especie(especie, meteo, True, altitud_ok, mes_actual, geologia)
         if res["score"] < UMBRAL_FAVORABLE:
             continue
 
@@ -283,10 +301,12 @@ async def consulta(c: Consulta):
                 "dias_lluvia_20d": meteo["dias_lluvia_20d"],
                 "t_min_media": meteo["t_min_media"],
                 "heladas_fuertes": meteo["heladas_fuertes"],
+                "geologia": geologia,
             },
         })
 
     # --- 6. Ordenar y limitar ---
+    
     features.sort(key=lambda f: f["properties"]["prob"], reverse=True)
     features = features[:MAX_POLIGONOS]
 
@@ -317,7 +337,8 @@ async def consulta(c: Consulta):
                 mejor_prob=mejor["prob"],
                 mejor_motivo=mejor["motivo"],
                 fuera_de_temporada=not en_temporada,
-            )
+                geologia=mejor.get("geologia"),
+            )       
     else:
         resumen = await generar_resumen_con_llm(
             especie_nombre=especie["nombre"],
@@ -330,7 +351,7 @@ async def consulta(c: Consulta):
             mejor_motivo="",
             fuera_de_temporada=not en_temporada,
             meses_especie=meses_especie,
-            ia_activa=IA_ACTIVA,
+            ia_activa=IA_ACTIVA,            
         )
         if resumen is None:
             resumen = generar_resumen_plantilla(
@@ -343,8 +364,9 @@ async def consulta(c: Consulta):
                 mejor_prob=0.0,
                 mejor_motivo="",
                 fuera_de_temporada=not en_temporada,
+                geologia=None,
             )
-
+       
     # --- 8. Añadir especies que comparten hábitat y están en temporada ---
     otras = _especies_comparten_habitat(c.especie_principal, mes_actual)
     if otras:

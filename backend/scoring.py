@@ -48,9 +48,10 @@ def puntuar_especie(
     habitat_ok: bool,
     altitud_ok: bool,
     mes_actual: int | None = None,
+    geologia: str | None = None, # nuevo parámetro para geología
 ) -> dict:
     desglose = {}
-
+ 
     s_lluvia_60 = _score_rango(meteo["lluvia_60d"], especie["lluvia_60d_optima"])
     desglose["lluvia_60d"] = round(s_lluvia_60, 2)
 
@@ -73,22 +74,37 @@ def puntuar_especie(
         s_helada = 1.0
     desglose["heladas"] = round(s_helada, 2)
 
-    if not habitat_ok:
-        return {"score": 0.0, "desglose": desglose, "motivo": "Hábitat no favorable"}
-
     s_altitud = 1.0 if altitud_ok else 0.0
     desglose["altitud"] = s_altitud
 
-    pesos = {
-        "lluvia_60d": 0.10,
-        "lluvia_20d": 0.30,
-        "dias_lluvia_20d": 0.20,
-        "t_min": 0.15,
-        "t_max": 0.05,
-        "heladas": 0.15,
-        "altitud": 0.05,
-    }
+    if not habitat_ok:
+        return {"score": 0.0, "desglose": desglose, "motivo": "Hábitat no favorable"}
 
+     # 7. Geología
+    if geologia and especie.get("geologia_optima"):
+        if geologia in especie["geologia_optima"]:
+            s_geologia = 1.0
+        elif "mixto" in especie["geologia_optima"] or geologia == "mixto":
+            s_geologia = 0.7
+        else:
+            s_geologia = 0.3
+        desglose["geologia"] = round(s_geologia, 2)
+    else:
+        s_geologia = 1.0
+        desglose["geologia"] = 1.0
+
+    # Reequilibrar pesos (bajar un poco los demás para meter geologia)
+    pesos = {
+        "lluvia_60d": 0.08,
+        "lluvia_20d": 0.25,
+        "dias_lluvia_20d": 0.18,
+        "t_min": 0.13,
+        "t_max": 0.04,
+        "heladas": 0.13,
+        "altitud": 0.04,
+        "geologia": 0.10,
+    }
+    # Sumar todos los factores, incluyendo geologia
     score = (
         pesos["lluvia_60d"] * s_lluvia_60
         + pesos["lluvia_20d"] * s_lluvia_20
@@ -97,6 +113,7 @@ def puntuar_especie(
         + pesos["t_max"] * s_t_max
         + pesos["heladas"] * s_helada
         + pesos["altitud"] * s_altitud
+        + pesos["geologia"] * s_geologia
     )
 
     if dias < 3:
