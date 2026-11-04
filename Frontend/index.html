@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
- 
+
 
 <head>
   <meta charset="UTF-8">
@@ -12,86 +12,110 @@
 </head>
 
 <body>
-
   <header class="cabecera">
-    <h1>🍄 MicoSeek</h1>
-    <p class="subtitulo">Orientación micológica basada en datos</p>
+    <div class="logo-container">
+      <span class="logo-icon">🍄</span>
+      <div class="logo-texto">
+        <h1>MicoSeek</h1>
+        <p>Orientación micológica basada en datos. Encuentra las mejores zonas para tus especies favoritas.</p>
+      </div>
+    </div>
   </header>
 
-  <main class="contenedor">
+  <div id="vista-formulario">
+    <main class="layout-principal">
+      <!-- Columna izquierda: MAPA -->
 
-    <!-- ESTADO 1: formulario -->
-    <section id="vista-formulario" class="tarjeta">
-      <h2>¿Dónde buscas?</h2>
+      <section class="zona-mapa">
+        <h2>1. Elige la zona</h2>
+        <div id="mapa-formulario"></div>
+        <p id="coords-seleccionadas" class="coords">...</p>
+        <button id="btn-consultar" disabled>Consultar probabilidad</button>
+        <div class="acciones-ubicacion">...
+          <div class="acciones-ubicacion">
+            <button type="button" id="btn-mi-ubicacion" class="btn-ubicacion">
+              📍 Usar mi ubicación
+            </button>
+            <input type="text" id="ubicacion" placeholder="O escribe un municipio..." autocomplete="off">
+            <button type="button" id="btn-buscar-ubicacion" class="btn-buscar">🔍</button>
+          </div>
 
-      <div class="acciones-ubicacion">
-        <button type="button" id="btn-mi-ubicacion" class="btn-ubicacion">
-          📍 Usar mi ubicación
-        </button>
-        <input type="text" id="ubicacion" placeholder="O escribe un municipio..." autocomplete="off">
-        <button type="button" id="btn-buscar-ubicacion" class="btn-buscar">🔍</button>
+
+
+        </div>
+      </section>
+
+      <!-- Columna derecha: BOSQUE. INDICACIONES y PASTOS -->
+      <section class="zona-ecosistemas">
+        <div class="tarjeta-ecosistema" data-especie="lactarius_deliciosus">
+          <img src="bosque.png" alt="Bosque de pinos">
+          <div class="overlay-tarjeta">
+            <h3>Bosque</h3>
+            <p>Níscalo, Boletus, Rebozuelo...</p>
+            <span class="btn-tarjeta">Buscar en el bosque</span>
+          </div>
+        </div>
+
+        <div class="indicaciones-ecosistema">
+          <p>👉 Elige uno de los dos ecosistemas o selecciona una especie manualmente:</p>
+          <select id="selector-especie">
+            <option value="">— Elegir especie —</option>
+          </select>
+        </div>
+
+        <div class="tarjeta-ecosistema" data-especie="pleurotus_eryngii">
+          <img src="pastizal.png" alt="Pastizal y erial">
+          <div class="overlay-tarjeta">
+            <h3>Pastos y Eriales</h3>
+            <p>Seta de cardo, Champiñón, Perrochico...</p>
+            <span class="btn-tarjeta">Buscar en el campo</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+
+  </div>
+
+  <footer class="pie-pagina">
+    <p>⚠️ Resultados orientativos. No garantizan la presencia ni la comestibilidad de las setas. Nunca consumas una
+      especie que no hayas identificado presencialmente por un experto.</p>
+    <p>&copy; 2026 MicoSeek. Orientación micológica basada en datos.</p>
+  </footer>
+
+  <!-- Modal de temporada -->
+  <div id="modal-temporada" class="modal oculto">
+    <div class="modal-contenido">
+      <h3>Especie fuera de temporada</h3>
+      <p id="modal-temporada-texto"></p>
+      <div class="modal-botones">
+        <button id="btn-cancelar-temporada" class="btn-secundario">Cancelar</button>
+        <button id="btn-confirmar-temporada">Continuar igualmente</button>
       </div>
-
-      <div id="mapa-formulario"></div>
-
-      <p id="coords-seleccionadas" class="coords">
-        Toca el mapa para marcar el punto donde quieres buscar
-      </p>
-
-      <h2>¿Qué especies te interesan?</h2>
-
-      <input type="text" id="buscador-especies" placeholder="Filtrar especies...">
-      <div id="lista-especies" class="lista-especies"></div>
-
-      <div class="aviso-legal">
-        <strong>⚠️ Aviso importante</strong>
-        <p>Los resultados son <strong>orientativos</strong>. La fructificación depende de factores locales no
-          modelizables. MicoSeek no identifica setas ni garantiza la presencia ni la comestibilidad de las que
-          encuentres.</p>
-        <label class="checkbox-aviso">
-          <input type="checkbox" id="acepto-aviso">
-          He leído y entiendo el aviso
-        </label>
-      </div>
-
-      <button id="btn-consultar" disabled>Consultar probabilidad</button>
-    </section>
-
-    <!-- ESTADO 2: resultados -->
-    <section id="vista-resultados" class="tarjeta oculto">
-      <button id="btn-nueva" class="btn-secundario">← Nueva consulta</button>
-
-      <div id="mapa"></div>
-
-      <div class="panel-resumen">
-        <h3>📋 Resumen</h3>
-        <p id="texto-resumen">Generando resumen...</p>
-        <p id="texto-resumen">Generando resumen...</p>
-        <button type="button" id="btn-mejor-zona" class="btn-enlace oculto">
-          🎯 Ver la mejor zona en el mapa
-        </button>
-      </div>
-
-
-
-      <p class="aviso-pie">
-        ⚠️ Resultados orientativos. Nunca consumas una seta que no hayas
-        identificado presencialmente por un experto.
-      </p>
-    </section>
-
-  </main>
+    </div>
+  </div>
 
   <!-- Overlay de carga -->
-
   <div id="overlay-carga" class="overlay-carga oculto">
     <div class="spinner"></div>
     <p id="overlay-texto">Analizando la zona...</p>
   </div>
 
+  <!-- Vista de resultados (oculta hasta consultar) -->
+  <section id="vista-resultados" class="tarjeta oculto">
+    <button id="btn-nueva" class="btn-secundario">← Nueva consulta</button>
+    <div id="mapa"></div>
+    <div class="panel-resumen">
+      <h3>📋 Resumen</h3>
+      <p id="texto-resumen">Generando resumen...</p>
+    </div>
+    <p class="aviso-pie">
+      ⚠️ Resultados orientativos. Nunca consumas una seta que no hayas identificado presencialmente por un experto.
+    </p>
+  </section>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="app.js?v=44"></script>
+  <script src="app.js?v=65"></script>
 </body>
 
 </html>

@@ -1,6 +1,5 @@
 // ---------- Estado ----------
 let especiePrincipal = null;
-const seleccionadas = new Set();
 let mapaFormulario = null;
 let marcadorFormulario = null;
 let coordsSeleccionadas = null;
@@ -10,24 +9,9 @@ let ESPECIES = [];
 
 // ---------- Elementos ----------
 const $ = (id) => document.getElementById(id);
-const listaEspecies = $("lista-especies");
-const buscador = $("buscador-especies");
 const btnConsultar = $("btn-consultar");
-const acepto = $("acepto-aviso");
 const vistaFormulario = $("vista-formulario");
 const vistaResultados = $("vista-resultados");
-
-// Cargar la clave de Tracestrack desde el backend
-let TRACESTRACK_KEY = "";
-async function cargarConfigMapas() {
-  try {
-    const resp = await fetch("/api/config/mapas");
-    const cfg = await resp.json();
-    TRACESTRACK_KEY = cfg.tracestrack_key || "";
-  } catch (e) {
-    console.error("No se pudo cargar la config de mapas:", e);
-  }
-}
 
 // ---------- Carga de especies ----------
 async function cargarEspecies() {
@@ -38,25 +22,22 @@ async function cargarEspecies() {
     renderEspecies();
   } catch (err) {
     console.error("No se pudieron cargar las especies:", err);
-    listaEspecies.innerHTML = '<p style="color:#c62828">No se pudieron cargar las especies.</p>';
+    const sel = $("selector-especie");
+    if (sel) sel.innerHTML = '<option value="">Error al cargar especies</option>';
   }
 }
 
-function renderEspecies(filtro = "") {
-  const f = filtro.toLowerCase();
-  listaEspecies.innerHTML = "";
-  ESPECIES
-    .filter(e => e.nombre.toLowerCase().includes(f) || e.cientifico.toLowerCase().includes(f))
-    .forEach(e => {
-      const div = document.createElement("label");
-      div.className = "especie-item" + (especiePrincipal === e.id ? " principal" : "");
-      div.innerHTML =
-        '<input type="checkbox" data-id="' + e.id + '" ' + (seleccionadas.has(e.id) ? "checked" : "") + ">" +
-        e.nombre +
-        ' <small>' + e.cientifico + '</small>' +
-        (especiePrincipal === e.id ? " ★" : "");
-      listaEspecies.appendChild(div);
-    });
+function renderEspecies() {
+  const sel = $("selector-especie");
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Elegir especie —</option>';
+  ESPECIES.forEach(e => {
+    const opt = document.createElement("option");
+    opt.value = e.id;
+    opt.textContent = e.nombre + " (" + e.cientifico + ")";
+    if (especiePrincipal === e.id) opt.selected = true;
+    sel.appendChild(opt);
+  });
 }
 
 // ---------- Mapa del formulario ----------
@@ -75,6 +56,8 @@ function inicializarMapaFormulario() {
   mapaFormulario.on("click", (ev) => {
     seleccionarPunto(ev.latlng.lat, ev.latlng.lng, false);
   });
+
+  setTimeout(() => mapaFormulario.invalidateSize(), 100);
 }
 
 function seleccionarPunto(lat, lng, centrar = false) {
@@ -85,7 +68,7 @@ function seleccionarPunto(lat, lng, centrar = false) {
     const p = ev.target.getLatLng();
     seleccionarPunto(p.lat, p.lng, false);
   });
-  coordsSeleccionadas = { lat, lng };
+  coordsSeleccionadas = { lat: lat, lng: lng };
   const el = $("coords-seleccionadas");
   if (el) el.textContent = "Punto seleccionado: " + lat.toFixed(4) + ", " + lng.toFixed(4);
   if (centrar) mapaFormulario.setView([lat, lng], 12);
@@ -102,15 +85,16 @@ function usarMiUbicacion() {
   btn.disabled = true;
   navigator.geolocation.getCurrentPosition(
     (pos) => {
-      const { latitude, longitude } = pos.coords;
-      seleccionarPunto(latitude, longitude, true);
-      btn.textContent = "Usar mi ubicación";
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      seleccionarPunto(lat, lng, true);
+      btn.textContent = "📍 Usar mi ubicación";
       btn.disabled = false;
     },
     (err) => {
       console.error(err);
       alert("No se pudo obtener la ubicación.");
-      btn.textContent = "Usar mi ubicación";
+      btn.textContent = "📍 Usar mi ubicación";
       btn.disabled = false;
     }
   );
@@ -125,8 +109,9 @@ async function buscarUbicacion() {
     );
     const data = await resp.json();
     if (data.length > 0) {
-      const { lat, lon } = data[0];
-      seleccionarPunto(parseFloat(lat), parseFloat(lon), true);
+      const lat = parseFloat(data[0].lat);
+      const lon = parseFloat(data[0].lon);
+      seleccionarPunto(lat, lon, true);
     } else {
       alert("No se encontró la ubicación.");
     }
@@ -137,40 +122,53 @@ async function buscarUbicacion() {
 }
 
 // ---------- Eventos del formulario ----------
-buscador.addEventListener("input", () => renderEspecies(buscador.value));
-
-listaEspecies.addEventListener("change", (ev) => {
-  if (ev.target.type !== "checkbox") return;
-  const id = ev.target.dataset.id;
-  if (ev.target.checked) {
-    seleccionadas.add(id);
-    if (!especiePrincipal) especiePrincipal = id;
-  } else {
-    seleccionadas.delete(id);
-    if (especiePrincipal === id) {
-      especiePrincipal = seleccionadas.size ? [...seleccionadas][0] : null;
-    }
-  }
-  renderEspecies(buscador.value);
-  actualizarBoton();
-});
-
-acepto.addEventListener("change", actualizarBoton);
-$("ubicacion").addEventListener("input", actualizarBoton);
-$("ubicacion").addEventListener("keydown", (ev) => {
-  if (ev.key === "Enter") {
-    ev.preventDefault();
-    buscarUbicacion();
-  }
-});
-
-function actualizarBoton() {
-  const ok = acepto.checked && seleccionadas.size > 0 && coordsSeleccionadas !== null;
-  btnConsultar.disabled = !ok;
+const selectorEspecie = $("selector-especie");
+if (selectorEspecie) {
+  selectorEspecie.addEventListener("change", (ev) => {
+    especiePrincipal = ev.target.value || null;
+    actualizarBoton();
+  });
 }
 
+const btnMiUbicacion = $("btn-mi-ubicacion");
+if (btnMiUbicacion) btnMiUbicacion.addEventListener("click", usarMiUbicacion);
+
+const btnBuscarUbicacion = $("btn-buscar-ubicacion");
+if (btnBuscarUbicacion) btnBuscarUbicacion.addEventListener("click", buscarUbicacion);
+
+const inputUbicacion = $("ubicacion");
+if (inputUbicacion) {
+  inputUbicacion.addEventListener("input", actualizarBoton);
+  inputUbicacion.addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter") {
+      ev.preventDefault();
+      buscarUbicacion();
+    }
+  });
+}
+
+function actualizarBoton() {
+  const ok = especiePrincipal !== null && coordsSeleccionadas !== null;
+  if (btnConsultar) btnConsultar.disabled = !ok;
+}
+
+// ---------- Selección por tarjetas de ecosistema ----------
+document.querySelectorAll('.tarjeta-ecosistema').forEach(tarjeta => {
+  tarjeta.addEventListener('click', () => {
+    const especieId = tarjeta.dataset.especie;
+    const selector = $("selector-especie");
+    if (selector && especieId) {
+      selector.value = especieId;
+      especiePrincipal = especieId;
+      selector.dispatchEvent(new Event("change"));
+      document.querySelectorAll('.tarjeta-ecosistema').forEach(t => t.classList.remove('seleccionada'));
+      tarjeta.classList.add('seleccionada');
+    }
+  });
+});
+
 // ---------- Consulta al backend ----------
-async function consultarBackend(lat, lng, principal) {
+async function consultarBackend(lat, lng, principal, confirmarTemporada) {
   const resp = await fetch("/api/consulta", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -178,6 +176,7 @@ async function consultarBackend(lat, lng, principal) {
       lat: lat,
       lng: lng,
       especie_principal: principal,
+      confirmar_temporada: !!confirmarTemporada,
     }),
   });
   if (!resp.ok) {
@@ -203,32 +202,74 @@ function ocultarCarga() {
   if (ov) ov.classList.add("oculto");
 }
 
-btnConsultar.addEventListener("click", async () => {
-  if (!coordsSeleccionadas) return;
-  btnConsultar.disabled = true;
-  mostrarCarga("Analizando la zona...");
+function mostrarModalTemporada(texto) {
+  return new Promise((resolve) => {
+    const modal = $("modal-temporada");
+    const textoEl = $("modal-temporada-texto");
+    const btnCancelar = $("btn-cancelar-temporada");
+    const btnConfirmar = $("btn-confirmar-temporada");
 
-  try {
-    const { lat, lng } = coordsSeleccionadas;
-    const datos = await consultarBackend(lat, lng, especiePrincipal);
+    textoEl.textContent = texto;
+    modal.classList.remove("oculto");
 
-    if (!datos) throw new Error("El servidor no devolvió datos.");
-    if (datos.error || datos.detail) throw new Error(datos.error || datos.detail);
+    const cerrar = (confirmado) => {
+      modal.classList.add("oculto");
+      btnCancelar.removeEventListener("click", onCancelar);
+      btnConfirmar.removeEventListener("click", onConfirmar);
+      resolve(confirmado);
+    };
 
-    ocultarCarga();
-    mostrarResultados(datos, { lat, lng });
-  } catch (err) {
-    ocultarCarga();
-    console.error("Fallo en consulta:", err);
-    alert("No se pudo completar la consulta: " + (err && err.message ? err.message : err));
-  } finally {
-    btnConsultar.textContent = "Consultar probabilidad";
-    actualizarBoton();
-  }
-});
+    const onCancelar = () => cerrar(false);
+    const onConfirmar = () => cerrar(true);
+
+    btnCancelar.addEventListener("click", onCancelar);
+    btnConfirmar.addEventListener("click", onConfirmar);
+  });
+}
+
+if (btnConsultar) {
+  btnConsultar.addEventListener("click", async () => {
+    if (!coordsSeleccionadas) return;
+    btnConsultar.disabled = true;
+    mostrarCarga("Analizando la zona...");
+
+    try {
+      const lat = coordsSeleccionadas.lat;
+      const lng = coordsSeleccionadas.lng;
+      const principal = especiePrincipal;
+
+      let datos = await consultarBackend(lat, lng, principal, false);
+
+      if (!datos) throw new Error("El servidor no devolvió datos.");
+      if (datos.error || datos.detail) throw new Error(datos.error || datos.detail);
+
+      if (datos.requiere_confirmacion) {
+        ocultarCarga();
+        const continuar = await mostrarModalTemporada(datos.aviso || "Especie fuera de temporada.");
+        if (!continuar) {
+          actualizarBoton();
+          return;
+        }
+        mostrarCarga("Recalculando con la especie fuera de temporada...");
+        datos = await consultarBackend(lat, lng, principal, true);
+        if (!datos) throw new Error("El servidor no devolvió datos en el recálculo.");
+        if (datos.error || datos.detail) throw new Error(datos.error || datos.detail);
+      }
+
+      ocultarCarga();
+      mostrarResultados(datos, { lat: lat, lng: lng });
+    } catch (err) {
+      ocultarCarga();
+      console.error("Fallo en consulta:", err);
+      alert("No se pudo completar la consulta: " + (err && err.message ? err.message : err));
+    } finally {
+      btnConsultar.textContent = "Consultar probabilidad";
+      actualizarBoton();
+    }
+  });
+}
 
 // ---------- Resultados ----------
-
 function mostrarResultados(datos, punto) {
   vistaFormulario.classList.add("oculto");
   vistaResultados.classList.remove("oculto");
@@ -236,56 +277,47 @@ function mostrarResultados(datos, punto) {
   if (mapa) mapa.remove();
   mapa = L.map("mapa", { zoomControl: true, scrollWheelZoom: true })
     .setView(datos.centro || [punto.lat, punto.lng], 11);
-  
+
   const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: "OpenStreetMap",
     maxZoom: 19,
   }).addTo(mapa);
-
-  const pnoa = L.tileLayer.wms("https://www.ign.es/wms-inspire/pnoa-ma", {
-    layers: "OI.OrthoimageCoverage",
-    format: "image/jpeg",
-    transparent: false,
-    attribution: "PNOA © Instituto Geográfico Nacional",
-    maxZoom: 19,
-  });
-  console.log("PNOA layer:", pnoa);
-
-  const topo = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
-    attribution: "OpenTopoMap (CC-BY-SA)",
-    maxZoom: 18,
-  });
 
   const tracestrack = L.tileLayer("/api/tiles/tracestrack/{z}/{x}/{y}.png", {
     attribution: "Tracestrack",
     maxZoom: 17,
   });
 
-  
+  const pnoa = L.tileLayer(
+    "https://www.ign.es/wmts/pnoa-ma?request=GetTile&service=WMTS&version=1.0.0" +
+    "&layer=OI.OrthoimageCoverage&style=default&tilematrixset=GoogleMapsCompatible" +
+    "&format=image/jpeg&tilematrix={z}&tilerow={y}&tilecol={x}",
+    {
+      attribution: "PNOA © IGN",
+      maxZoom: 19,
+      opacity: 0.7,
+    }
+  );
+
   L.control.layers(
-  {
-    " OSM": osm,
-    "Topográfico": topo,
-    "Tracestrack": tracestrack,
-    "Ortofoto (PNOA)": pnoa,  // <-- Debe estar aquí
-  },
-  null,
-  { position: "topright" }
-).addTo(mapa);
+    { "Calles (OSM)": osm, "Tracestrack": tracestrack },
+    { "Ortofoto (PNOA)": pnoa },
+    { position: "topright" }
+  ).addTo(mapa);
 
   capaResultados = L.featureGroup().addTo(mapa);
 
-    const PALETA = {
-    verde: { fill: "#58e617", stroke: "#58e617" },     // azul fosforito claro (Alta)
-    amarillo: { fill: "#FFA500", stroke: "#CC8400" },  // naranja fosforito claro (Media)
-    rojo: { fill: "#FF0000", stroke: "#CC0000" },      // rojo (Baja)
+  const PALETA = {
+    verde: { fill: "#4ef108", stroke: "#4ef108" },
+    amarillo: { fill: "#FFA500", stroke: "#CC8400" },
+    rojo: { fill: "#FF0000", stroke: "#CC0000" },
   };
 
   if (datos.geojson && datos.geojson.features && datos.geojson.features.length > 0) {
     L.geoJSON(datos.geojson, {
       style: function (feature) {
         const p = PALETA[feature.properties.color] || { fill: "#888", stroke: "#555" };
-        return { color: p.stroke, weight: 3, fillColor: p.fill, fillOpacity: 0.35 };
+        return { color: p.stroke, weight: 1.5, fillColor: p.fill, fillOpacity: 0.25 };
       },
       onEachFeature: function (feature, layer) {
         const p = feature.properties;
@@ -293,22 +325,20 @@ function mostrarResultados(datos, punto) {
         const colorTxt = p.color === "verde" ? "Alta" : "Media";
         const popupHtml =
           '<div style="min-width:180px">' +
-          'Hábitat: <strong style="text-transform:capitalize">' + p.habitat + '</strong><br>' +
-          'Probabilidad: <span style="color:#2e7d32;font-weight:600">' + colorTxt + '</span> - ' + pct + '%<br>' +
-
+          '<strong style="text-transform:capitalize">' + p.habitat + '</strong><br>' +
+          '<span style="color:#2e7d32;font-weight:600">' + colorTxt + '</span> - ' + pct + '%<br>' +
           '<hr style="margin:6px 0;border:none;border-top:1px solid #ddd">' +
           'Lluvia ultimos 2 meses: <strong>' + (p.lluvia_60d != null ? p.lluvia_60d : "-") + ' mm</strong><br>' +
           'Lluvia ultimos 20 dias: <strong>' + (p.lluvia_20d != null ? p.lluvia_20d : "-") + ' mm</strong><br>' +
           'Dias de lluvia (20d): <strong>' + (p.dias_lluvia_20d != null ? p.dias_lluvia_20d : "-") + '</strong><br>' +
           'Temperatura minima ultimos 20 dias: <strong>' + (p.t_min_media != null ? p.t_min_media : "-") + ' C</strong><br>' +
-
           'Heladas fuertes: <strong>' + (p.heladas_fuertes ? "Si" : "No") + '</strong><br>' +
           (p.altitud ? 'Altitud: <strong>' + Math.round(p.altitud) + ' m</strong><br>' : '') +
           '<em style="color:#666;font-size:0.85em">' + (p.motivo || '') + '</em>' +
           '</div>';
         layer.bindPopup(popupHtml);
-        layer.on("mouseover", function () { layer.setStyle({ weight: 2, fillOpacity: 0.20 }); });
-        layer.on("mouseout", function () { layer.setStyle({ weight: 3, fillOpacity: 0.35 }); });
+        layer.on("mouseover", function () { layer.setStyle({ weight: 3, fillOpacity: 0.4 }); });
+        layer.on("mouseout", function () { layer.setStyle({ weight: 1.5, fillOpacity: 0.25 }); });
       },
     }).addTo(capaResultados);
 
@@ -322,36 +352,6 @@ function mostrarResultados(datos, punto) {
 
   const resumenEl = $("texto-resumen");
   if (resumenEl) resumenEl.textContent = datos.resumen || "Sin resumen disponible.";
-
-  const lista = $("lista-candidatas");
-  lista.innerHTML = "";
-  const features = (datos.geojson && datos.geojson.features ? datos.geojson.features : [])
-    .slice()
-    .sort((a, b) => b.properties.prob - a.properties.prob);
-
-  if (features.length === 0) {
-    lista.innerHTML = "<li>No se han encontrado zonas favorables en el radio consultado.</li>";
-  } else {
-    features.forEach(function (f, i) {
-      const p = f.properties;
-      const coords = f.geometry.coordinates.flat(2);
-      const lngs = coords.filter(function (_, idx) { return idx % 2 === 0; });
-      const lats = coords.filter(function (_, idx) { return idx % 2 === 1; });
-      const lat = (Math.min.apply(null, lats) + Math.max.apply(null, lats)) / 2;
-      const lng = (Math.min.apply(null, lngs) + Math.max.apply(null, lngs)) / 2;
-
-      const etiqueta = p.color === "verde" ? "Alta" : "Media";
-      const li = document.createElement("li");
-      li.innerHTML =
-        "<strong>" + (i + 1) + ". " + p.habitat + "</strong> - " + etiqueta +
-        " (" + Math.round(p.prob * 100) + "%)";
-      li.style.cursor = "pointer";
-      li.addEventListener("click", function () {
-        mapa.setView([lat, lng], 14);
-      });
-      lista.appendChild(li);
-    });
-  }
 
   setTimeout(function () { mapa.invalidateSize(); }, 100);
 }
