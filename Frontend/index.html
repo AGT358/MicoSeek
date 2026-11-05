@@ -9,38 +9,41 @@
   <title>MicoSeek — Orientación micológica</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="style.css" />
-  </head>
+</head>
 
 <body>
   <header class="cabecera">
-  <h1>🍄 MicoSeek</h1>
-  <p class="subtitulo">Orientación micológica basada en datos</p>
-  <label id="toggle-ia-wrap" class="toggle-ia oculto">
-    <input type="checkbox" id="toggle-ia">
-    Usar IA para el resumen
-  </label>
-</header>
+    <h1>🍄 MicoSeek</h1>
+    <p class="subtitulo">Orientación micológica basada en datos</p>
+    <label id="toggle-ia-wrap" class="toggle-ia oculto">
+      <input type="checkbox" id="toggle-ia">
+      Usar IA para el resumen
+    </label>
+  </header>
 
   <div id="vista-formulario">
     <main class="layout-principal">
       <!-- Columna izquierda: MAPA -->
 
       <section class="zona-mapa">
-        <h2>1. Elige la zona</h2>
+        <div class="mapa-cabecera">
+          <h2>1. Elige la zona</h2>
+          <p id="coords-seleccionadas" class="coords">
+            Toca el mapa para marcar el punto donde quieres buscar.
+          </p>
+        </div>
+
         <div id="mapa-formulario"></div>
-        <p id="coords-seleccionadas" class="coords">...</p>
-        <button id="btn-consultar" disabled>Consultar probabilidad</button>
-        <div class="acciones-ubicacion">...
-          <div class="acciones-ubicacion">
-            <button type="button" id="btn-mi-ubicacion" class="btn-ubicacion">
-              📍 Usar mi ubicación
-            </button>
-            <input type="text" id="ubicacion" placeholder="O escribe un municipio..." autocomplete="off">
+
+        <div class="mapa-controles">
+          <div class="control-municipio">
+            <input type="text" id="ubicacion" placeholder="Escribe un municipio..." autocomplete="off">
             <button type="button" id="btn-buscar-ubicacion" class="btn-buscar">🔍</button>
           </div>
-
-
-
+          <button type="button" id="btn-mi-ubicacion" class="btn-ubicacion">
+            📍 Mi ubicación
+          </button>
+          <button id="btn-consultar" disabled>Consultar probabilidad</button>
         </div>
       </section>
 

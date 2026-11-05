@@ -572,19 +572,19 @@ button#btn-consultar:disabled {
   overflow: hidden;
 }
 
-.zona-mapa {
+/* .zona-mapa {
   grid-column: 1 / 2;
   display: flex;
   flex-direction: column;
   min-height: 0;
   /* importante para que el flex-child no desborde */
-}
+} */
 
-.zona-mapa #mapa-formulario {
+/* .zona-mapa #mapa-formulario {
   flex: 1;
   min-height: 0;
   border-radius: 10px;
-}
+} */
 
 .zona-ecosistemas {
   grid-column: 2 / 3;
@@ -715,7 +715,7 @@ Indicaciones en el medio
 
 #btn-consultar {
   padding: 0.5rem 1rem;
-  font-size: 0.85rem;
+  font-size: 1rem;
   white-space: nowrap;
 }
 
@@ -734,9 +734,9 @@ Indicaciones en el medio
     height: auto;
     overflow: visible;
   }
-  .zona-mapa {
+  /* .zona-mapa {
     grid-column: 1 / 2;
-  }
+  } */
   .zona-ecosistemas {
     grid-column: 1 / 2;
     grid-template-rows: 1fr auto 1fr;
@@ -746,5 +746,99 @@ Indicaciones en el medio
   .zona-controles {
     flex-direction: column;
     align-items: stretch;
+  }
+}
+
+
+/* Columna del mapa */
+.zona-mapa {
+  grid-column: 1 / 2;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 0.5rem;
+}
+
+/* Cabecera del mapa: título + punto seleccionado */
+.mapa-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.mapa-cabecera h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.mapa-cabecera .coords {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+/* Mapa grande */
+.zona-mapa #mapa-formulario {
+  flex: 1;
+  min-height: 300px;
+  border-radius: 10px;
+}
+
+/* Fila de controles debajo del mapa */
+.mapa-controles {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.control-municipio {
+  flex: 0 0 40%;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.control-municipio input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.control-municipio .btn-buscar {
+  width: auto;
+  margin: 0;
+  padding: 0 0.6rem;
+  font-size: 1rem;
+}
+
+.mapa-controles .btn-ubicacion {
+  flex: 0 0 20%;
+  margin: 0;
+  padding: 0.5rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.mapa-controles #btn-consultar {
+  flex: 0 0 40%;
+  margin: 0;
+  padding: 0.5rem;
+  font-size: 0.9rem;
+}
+
+/* Responsive: en móvil, los controles se apilan */
+@media (max-width: 850px) {
+  .mapa-controles {
+    flex-direction: column;
+  }
+  .control-municipio,
+  .mapa-controles .btn-ubicacion,
+  .mapa-controles #btn-consultar {
+    flex: 1 1 auto;
   }
 }

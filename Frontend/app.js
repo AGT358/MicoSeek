@@ -333,7 +333,7 @@ function mostrarResultados(datos, punto) {
           'Dias de lluvia (20d): <strong>' + (p.dias_lluvia_20d != null ? p.dias_lluvia_20d : "-") + '</strong><br>' +
           'Temperatura minima ultimos 20 dias: <strong>' + (p.t_min_media != null ? p.t_min_media : "-") + ' C</strong><br>' +
           'Heladas fuertes: <strong>' + (p.heladas_fuertes ? "Si" : "No") + '</strong><br>' +
-          'Geología: <strong>' + (p.geologia || "-") + '</strong><br>' +
+          'Geología: suelo <strong>' + (p.geologia || "-") + '</strong><br>' +
           (p.altitud ? 'Altitud: <strong>' + Math.round(p.altitud) + ' m</strong><br>' : '') +
           '<em style="color:#666;font-size:0.85em">' + (p.motivo || '') + '</em>' +
           '</div>';
