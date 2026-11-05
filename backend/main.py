@@ -256,7 +256,7 @@ async def consulta(c: Consulta):
     }
 
     # Obtener geología por celda (con caché)
-    semaforo_geo = asyncio.Semaphore(2)
+    semaforo_geo = asyncio.Semaphore(5)
 
     async def geo_celda(clave):
         async with semaforo_geo:

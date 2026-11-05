@@ -357,6 +357,34 @@ function mostrarResultados(datos, punto) {
   setTimeout(function () { mapa.invalidateSize(); }, 100);
 }
 
+async function cargarConfigIA() {
+  const adminKey = new URLSearchParams(window.location.search).get("admin");
+  if (!adminKey) return;
+
+  try {
+    const resp = await fetch("/api/config/ia?admin_key=" + encodeURIComponent(adminKey));
+    const cfg = await resp.json();
+    const wrap = $("toggle-ia-wrap");
+    const toggle = $("toggle-ia");
+    if (wrap && toggle) {
+      wrap.classList.remove("oculto");
+      toggle.checked = cfg.activa;
+      toggle.disabled = !cfg.tiene_clave;
+      toggle.addEventListener("change", async (ev) => {
+        await fetch("/api/config/ia", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ activa: ev.target.checked, admin_key: adminKey }),
+        });
+      });
+    }
+  } catch (e) {
+    console.error("No se pudo cargar la config de IA:", e);
+  }
+}
+
+// En el init:
+
 // ---------- Nueva consulta ----------
 const btnNueva = $("btn-nueva");
 if (btnNueva) {
@@ -373,3 +401,4 @@ if (btnNueva) {
 cargarEspecies();
 inicializarMapaFormulario();
 actualizarBoton();
+cargarConfigIA();

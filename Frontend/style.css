@@ -549,7 +549,6 @@ button#btn-consultar:disabled {
   border-radius: 20px;
   border: 1px solid var(--borde);
 }
-
 .toggle-ia input {
   width: auto;
   margin: 0;

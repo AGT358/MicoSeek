@@ -34,10 +34,10 @@ ESPECIES = {
         "termofila": True,
         "meses": [6, 7, 8, 9, 10],
         "temporada": {"inicio": [6, 7], "plena": [8, 9], "final": [10]},
-        "geologia_optima": ["calizo"],
+        "geologia_optima": ["siliceo"],
     },
     "lactarius_deliciosus": {
-        "nombre": "Níscalo",
+        "nombre": "Níscalo común",
         "cientifico": "Lactarius deliciosus",
         "habitats": ["pinar"],
         "altitud": (200, 1800),
@@ -49,7 +49,7 @@ ESPECIES = {
         "termofila": False,
         "meses": [9, 10, 11, 12],
         "temporada": {"inicio": [9], "plena": [10, 11], "final": [12]},
-        "geologia_optima": ["calizo", "siliceo", "mixto"],  # tolera ambos, mejor calizo
+        "geologia_optima": ["siliceo"],  # tolera ambos, mejor calizo
     },
     "pleurotus_eryngii": {
         "nombre": "Seta de cardo",
@@ -99,7 +99,7 @@ ESPECIES = {
     "cantharellus_cibarius": {
         "nombre": "Rebozuelo",
         "cientifico": "Cantharellus cibarius",
-        "habitats": ["robledal", "hayedo", "pinar", "mixto"],
+        "habitats": ["robledal", "hayedo", "mixto"],
         "altitud": (200, 1500),
         "lluvia_60d_optima": (70, 180),
         "lluvia_20d_optima": (20, 70),
@@ -109,7 +109,7 @@ ESPECIES = {
         "termofila": True,
         "meses": [5, 6, 9, 10, 11],
         "temporada": {"inicio": [5, 6], "plena": [9, 10], "final": [11]},
-        "geologia_optima": ["calizo", "siliceo", "mixto"],
+        "geologia_optima": ["siliceo"],
     },
     "macrolepiota_procera": {
         "nombre": "Parasol",
@@ -124,12 +124,12 @@ ESPECIES = {
         "termofila": True,
         "meses": [6, 7, 8, 9, 10, 11],
         "temporada": {"inicio": [6, 7], "plena": [8, 9, 10], "final": [11]},
-        "geologia_optima": ["calizo", "mixto"],
+        "geologia_optima": ["calizo", "siliceo", "mixto"],
     },
     "boletus_pinophilus": {
-        "nombre": "Boleto pinícola",
+        "nombre": "Boletus pinícola",
         "cientifico": "Boletus pinophilus",
-        "habitats": ["pinar", "mixto"],
+        "habitats": ["pinar", "robledal", "mixto"],
         "altitud": (400, 1800),
         "lluvia_60d_optima": (80, 200),
         "lluvia_20d_optima": (20, 80),
@@ -162,7 +162,7 @@ ESPECIES = {
         "nombre": "Níscalo de sangre",
         "cientifico": "Lactarius sanguifluus",
         "habitats": ["pinar"],
-        "altitud": (200, 1600),
+        "altitud": (700, 1200),
         "lluvia_60d_optima": (60, 180),
         "lluvia_20d_optima": (15, 70),
         "t_min_optima": (2, 12),
@@ -171,7 +171,7 @@ ESPECIES = {
         "termofila": False,
         "meses": [9, 10, 11],
         "temporada": {"inicio": [9], "plena": [10, 11], "final": []},
-        "geologia_optima": ["calizo", "siliceo", "mixto"],
+        "geologia_optima": ["calizo"],
     },
     "hydnum_repandum": {
         "nombre": "Lengua de vaca",
