@@ -6,6 +6,7 @@ let coordsSeleccionadas = null;
 let mapa = null;
 let capaResultados = null;
 let ESPECIES = [];
+let mejorFeature = null; //variable globa
 
 // ---------- Elementos ----------
 const $ = (id) => document.getElementById(id);
@@ -325,6 +326,19 @@ function mostrarResultados(datos, punto) {
     rojo: { fill: "#FF0000", stroke: "#CC0000" },
   };
 
+  // Guardar la mejor feature para el botón de "Ver la mejor zona"
+  const features = datos.geojson?.features || [];
+  mejorFeature = features.length > 0 ? features[0] : null;  // el primero es el de mayor score
+
+  const btnMejor = $("btn-mejor-zona");
+  if (btnMejor) {
+    if (mejorFeature) {
+      btnMejor.classList.remove("oculto");
+    } else {
+      btnMejor.classList.add("oculto");
+    }
+  }
+
   if (datos.geojson && datos.geojson.features && datos.geojson.features.length > 0) {
     L.geoJSON(datos.geojson, {
       style: function (feature) {
@@ -415,9 +429,45 @@ if (btnNueva) {
     vistaResultados.classList.add("oculto");
     vistaFormulario.classList.remove("oculto");
     btnConsultar.textContent = "Consultar probabilidad";
+
+    const btnMejor = $("btn-mejor-zona");
+    if (btnMejor) btnMejor.classList.add("oculto");
+
     if (mapaFormulario) setTimeout(() => mapaFormulario.invalidateSize(), 100);
     actualizarBoton();
   });
+}
+
+//Listener para el botón de "Ver la mejor zona en el mapa"
+const btnMejorZona = $("btn-mejor-zona");
+if (btnMejorZona) {
+  btnMejorZona.addEventListener("click", () => {
+    if (!mejorFeature || !mapa) return;
+
+    const geom = mejorFeature.geometry;
+    let coords = [];
+
+    if (geom.type === "Polygon") {
+      coords = geom.coordinates[0];  // el anillo exterior
+    } else if (geom.type === "MultiPolygon") {
+      coords = geom.coordinates[0][0];  // el primer anillo del primer polígono
+    } else {
+      return;
+    }
+
+    const lats = coords.map(c => c[1]);
+    const lngs = coords.map(c => c[0]);
+    const lat = (Math.min(...lats) + Math.max(...lats)) / 2;
+    const lng = (Math.min(...lngs) + Math.max(...lngs)) / 2;
+
+    if (isNaN(lat) || isNaN(lng)) {
+      console.error("[Debug] Centroide inválido:", lat, lng, geom);
+      return;
+    }
+
+    mapa.setView([lat, lng], 14);
+  });
+
 }
 
 // ---------- Init ----------
