@@ -295,25 +295,43 @@ async def consulta(c: Consulta):
 
         altitud = meteo.get("elevation")
         altitud_ok = (altitud is None) or (alt_lo <= altitud <= alt_hi)
-        
+
         geologia = geologia_por_celda.get(_celda_meteo(p["lat"], p["lng"]))
-        res = puntuar_especie(especie, meteo, True, altitud_ok, mes_actual, geologia)
-
         orientacion = orientacion_por_celda.get(_celda_meteo(p["lat"], p["lng"]))
-        res = puntuar_especie(especie, meteo, True, altitud_ok, mes_actual, geologia, orientacion)
 
-        if res["score"] < UMBRAL_FAVORABLE:
+        # Puntuar la especie principal (para el filtro de favorables)
+        res_principal = puntuar_especie(especie, meteo, True, altitud_ok, mes_actual, geologia, orientacion)
+        if res_principal["score"] < UMBRAL_FAVORABLE:
             continue
+
+        # Calcular las 5 mejores especies para este polígono
+        scores_especies = []
+        for eid, e in ESPECIES.items():
+            if p["habitat"] not in e.get("habitats", []):
+                continue
+            meses_e = e.get("meses", [])
+            if meses_e and mes_actual not in meses_e:
+                continue  # fuera de temporada, no la puntuamos
+            alt_lo_e, alt_hi_e = e["altitud"]
+            alt_ok_e = (altitud is None) or (alt_lo_e <= altitud <= alt_hi_e)
+            r = puntuar_especie(e, meteo, True, alt_ok_e, mes_actual, geologia, orientacion)
+            scores_especies.append({
+                "nombre": e["nombre"],
+                "score": r["score"],
+                "color": etiqueta(r["score"]),
+            })
+        scores_especies.sort(key=lambda x: x["score"], reverse=True)
+        top5 = scores_especies[:5]
 
         features.append({
             "type": "Feature",
             "geometry": p["geometry"].__geo_interface__,
             "properties": {
-                "prob": res["score"],
-                "color": etiqueta(res["score"]),
+                "prob": res_principal["score"],
+                "color": etiqueta(res_principal["score"]),
                 "habitat": p["habitat"],
                 "clc_code": p["clc_code"],
-                "motivo": res["motivo"],
+                "motivo": res_principal["motivo"],
                 "altitud": altitud,
                 "lluvia_60d": meteo["lluvia_60d"],
                 "lluvia_20d": meteo["lluvia_20d"],
@@ -322,6 +340,7 @@ async def consulta(c: Consulta):
                 "heladas_fuertes": meteo["heladas_fuertes"],
                 "geologia": geologia,
                 "orientacion": orientacion,
+                "top_especies": top5,
             },
         })
 

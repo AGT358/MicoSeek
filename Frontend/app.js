@@ -278,9 +278,9 @@ function mostrarResultados(datos, punto) {
   mapa = L.map("mapa", { zoomControl: true, scrollWheelZoom: true })
     .setView(datos.centro || [punto.lat, punto.lng], 11);
 
-      // Marcador del punto consultado
+  // Marcador del punto consultado
   const centro = datos.centro || [punto.lat, punto.lng];
-    L.circleMarker(centro, {
+  L.circleMarker(centro, {
     radius: 8,
     color: "#2e7d32",
     fillColor: "#2e7d32",
@@ -336,7 +336,7 @@ function mostrarResultados(datos, punto) {
         const pct = Math.round((p.prob || 0) * 100);
         const colorTxt = p.color === "verde" ? "Alta" : "Media";
         const popupHtml =
-          '<div style="min-width:180px">' +
+          '<div style="min-width:200px">' +
           '<strong style="text-transform:capitalize">' + p.habitat + '</strong><br>' +
           '<span style="color:#2e7d32;font-weight:600">' + colorTxt + '</span> - ' + pct + '%<br>' +
           '<hr style="margin:6px 0;border:none;border-top:1px solid #ddd">' +
@@ -345,11 +345,20 @@ function mostrarResultados(datos, punto) {
           'Dias de lluvia (20d): <strong>' + (p.dias_lluvia_20d != null ? p.dias_lluvia_20d : "-") + '</strong><br>' +
           'Temperatura minima ultimos 20 dias: <strong>' + (p.t_min_media != null ? p.t_min_media : "-") + ' C</strong><br>' +
           'Heladas fuertes: <strong>' + (p.heladas_fuertes ? "Si" : "No") + '</strong><br>' +
-          'Geología: suelo <strong>' + (p.geologia || "-") + '</strong><br>' +
+          'Geología: <strong>' + (p.geologia || "-") + '</strong><br>' +
           'Orientación: <strong>' + (p.orientacion || "-") + '</strong><br>' +
           (p.altitud ? 'Altitud: <strong>' + Math.round(p.altitud) + ' m</strong><br>' : '') +
-
           '<em style="color:#666;font-size:0.85em">' + (p.motivo || '') + '</em>' +
+          '<hr style="margin:6px 0;border:none;border-top:1px solid #ddd">' +
+          '<strong>Puntuación otras especies:</strong><br>' +
+          (p.top_especies && p.top_especies.length > 0
+            ? p.top_especies.map(e =>
+              '• ' + e.nombre + ' (' + Math.round(e.score * 100) + '%)'
+            ).join('<br>')
+            : '—') +
+          '</div>';
+
+        '<em style="color:#666;font-size:0.85em">' + (p.motivo || '') + '</em>' +
           '</div>';
         layer.bindPopup(popupHtml);
         layer.on("mouseover", function () { layer.setStyle({ weight: 3, fillOpacity: 0.4 }); });
