@@ -8,6 +8,8 @@ let capaResultados = null;
 let ESPECIES = [];
 let mejorFeature = null; //variable globa
 
+
+
 // ---------- Elementos ----------
 const $ = (id) => document.getElementById(id);
 const btnConsultar = $("btn-consultar");
@@ -43,6 +45,7 @@ function renderEspecies() {
 
 // ---------- Mapa del formulario ----------
 function inicializarMapaFormulario() {
+  console.log("[Debug] inicializarMapaFormulario llamado");
   if (mapaFormulario) return;
   mapaFormulario = L.map("mapa-formulario", {
     center: [40.4168, -3.7038],
@@ -271,75 +274,62 @@ if (btnConsultar) {
 }
 
 // ---------- Resultados ----------
+
+
 function mostrarResultados(datos, punto) {
-  vistaFormulario.classList.add("oculto");
+  // Ocultar solo los controles de la columna derecha (ecosistemas), no el mapa
+  document.querySelectorAll(".zona-ecosistemas").forEach(el => el.classList.add("oculto"));
+
   vistaResultados.classList.remove("oculto");
 
-  if (mapa) mapa.remove();
-  mapa = L.map("mapa", { zoomControl: true, scrollWheelZoom: true })
-    .setView(datos.centro || [punto.lat, punto.lng], 11);
+  // Asegurarse de que el mapa existe
+  if (!mapaFormulario) inicializarMapaFormulario();
 
-  // Marcador del punto consultado
+  // Quitar la capa de resultados anterior (si existe)
+  if (capaResultados) {
+    mapaFormulario.removeLayer(capaResultados);
+    capaResultados = null;
+  }
+
+  // // Quitar el marcador de selección (si existe)
+  // if (marcadorFormulario) {
+  //   mapaFormulario.removeLayer(marcadorFormulario);
+  //   marcadorFormulario = null;
+  // }
+
+    
+  // Reutilizar el marcador de selección (o crear uno nuevo si no existe)
   const centro = datos.centro || [punto.lat, punto.lng];
-  L.circleMarker(centro, {
-    radius: 8,
-    color: "#2e7d32",
-    fillColor: "#2e7d32",
-    fillOpacity: 0.9,
-    weight: 2
-  }).addTo(mapa).bindPopup(
-    "Punto consultado: " + centro[0].toFixed(4) + ", " + centro[1].toFixed(4)
-  );
+  if (marcadorFormulario) {
+    // Mover el marcador existente al centro de la consulta
+    marcadorFormulario.setLatLng(centro);
+    marcadorFormulario.bindPopup("Punto consultado: " + centro[0].toFixed(4) + ", " + centro[1].toFixed(4));
+  } else {
+    // Si no hay marcador, crear uno nuevo
+    marcadorFormulario = L.marker(centro, { title: "Punto consultado" })
+      .addTo(mapaFormulario)
+      .bindPopup("Punto consultado: " + centro[0].toFixed(4) + ", " + centro[1].toFixed(4));
+  }
 
-  const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "OpenStreetMap",
-    maxZoom: 19,
-  }).addTo(mapa);
-
-  const tracestrack = L.tileLayer("/api/tiles/tracestrack/{z}/{x}/{y}.png", {
-    attribution: "Tracestrack",
-    maxZoom: 17,
-  });
-
-  const pnoa = L.tileLayer(
-    "https://www.ign.es/wmts/pnoa-ma?request=GetTile&service=WMTS&version=1.0.0" +
-    "&layer=OI.OrthoimageCoverage&style=default&tilematrixset=GoogleMapsCompatible" +
-    "&format=image/jpeg&tilematrix={z}&tilerow={y}&tilecol={x}",
-    {
-      attribution: "PNOA © IGN",
-      maxZoom: 19,
-      opacity: 0.7,
-    }
-  );
-
-  L.control.layers(
-    { "Calles (OSM)": osm, "Tracestrack": tracestrack },
-    { "Ortofoto (PNOA)": pnoa },
-    { position: "topright" }
-  ).addTo(mapa);
-
-  capaResultados = L.featureGroup().addTo(mapa);
+  // Crear la capa de resultados (GeoJSON)
+  capaResultados = L.featureGroup().addTo(mapaFormulario);
 
   const PALETA = {
-    verde: { fill: "#f108bb", stroke: "#f108bb" },
+    verde: { fill: "#00FF00", stroke: "#00CC00" },
     amarillo: { fill: "#FFA500", stroke: "#CC8400" },
     rojo: { fill: "#FF0000", stroke: "#CC0000" },
   };
 
-  // Guardar la mejor feature para el botón de "Ver la mejor zona"
   const features = datos.geojson?.features || [];
-  mejorFeature = features.length > 0 ? features[0] : null;  // el primero es el de mayor score
+  mejorFeature = features.length > 0 ? features[0] : null;
 
   const btnMejor = $("btn-mejor-zona");
   if (btnMejor) {
-    if (mejorFeature) {
-      btnMejor.classList.remove("oculto");
-    } else {
-      btnMejor.classList.add("oculto");
-    }
+    if (mejorFeature) btnMejor.classList.remove("oculto");
+    else btnMejor.classList.add("oculto");
   }
 
-  if (datos.geojson && datos.geojson.features && datos.geojson.features.length > 0) {
+  if (features.length > 0) {
     L.geoJSON(datos.geojson, {
       style: function (feature) {
         const p = PALETA[feature.properties.color] || { fill: "#888", stroke: "#555" };
@@ -349,7 +339,6 @@ function mostrarResultados(datos, punto) {
         const p = feature.properties;
         const pct = Math.round((p.prob || 0) * 100);
         const colorTxt = p.color === "verde" ? "Alta" : "Media";
-        //Nuevo popup con información adicional
         const popupHtml =
           '<div style="min-width:200px">' +
           '<strong style="text-transform:capitalize">' + p.habitat + '</strong><br>' +
@@ -382,18 +371,17 @@ function mostrarResultados(datos, punto) {
       },
     }).addTo(capaResultados);
 
-    if (capaResultados && typeof capaResultados.getBounds === "function") {
-      const bounds = capaResultados.getBounds();
-      if (bounds.isValid()) {
-        mapa.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
-      }
+    // Ajustar la vista a los polígonos
+    const bounds = capaResultados.getBounds();
+    if (bounds.isValid()) {
+      mapaFormulario.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
     }
   }
 
   const resumenEl = $("texto-resumen");
   if (resumenEl) resumenEl.textContent = datos.resumen || "Sin resumen disponible.";
 
-  setTimeout(function () { mapa.invalidateSize(); }, 100);
+  setTimeout(function () { mapaFormulario.invalidateSize(); }, 100);
 }
 
 async function cargarConfigIA() {
@@ -425,18 +413,45 @@ async function cargarConfigIA() {
 // En el init:
 
 // ---------- Nueva consulta ----------
+
 const btnNueva = $("btn-nueva");
+
+const controles = document.querySelectorAll(".zona-ecosistemas, .mapa-controles");
+controles.forEach(el => el.classList.remove("oculto"));
+
 if (btnNueva) {
   btnNueva.addEventListener("click", () => {
     vistaResultados.classList.add("oculto");
     vistaFormulario.classList.remove("oculto");
+
+    // Quitar la capa de resultados
+    if (capaResultados) {
+      mapaFormulario.removeLayer(capaResultados);
+      capaResultados = null;
+    }
+    // // Quitar el marcador del punto consultado (el que se añadió en mostrarResultados)
+    // mapaFormulario.eachLayer(function (layer) {
+    //   if (layer instanceof L.Marker && layer.getPopup() && layer.getPopup().getContent().includes("Punto consultado")) {
+    //     mapaFormulario.removeLayer(layer);
+    //   }
+    // });
+
+    // Quitar el marcador del punto consultado
+    if (marcadorFormulario) {
+      mapaFormulario.removeLayer(marcadorFormulario);
+      marcadorFormulario = null;
+    }
+
+    // Restaurar la vista inicial
+    mapaFormulario.setView([40.4168, -3.7038], 6);
+
     btnConsultar.textContent = "Consultar probabilidad";
+    actualizarBoton();
 
     const btnMejor = $("btn-mejor-zona");
     if (btnMejor) btnMejor.classList.add("oculto");
 
-    if (mapaFormulario) setTimeout(() => mapaFormulario.invalidateSize(), 100);
-    actualizarBoton();
+    setTimeout(() => mapaFormulario.invalidateSize(), 100);
   });
 }
 
@@ -444,30 +459,26 @@ if (btnNueva) {
 const btnMejorZona = $("btn-mejor-zona");
 if (btnMejorZona) {
   btnMejorZona.addEventListener("click", () => {
-    if (!mejorFeature || !mapa) return;
+    console.log("[Debug] Click. mejorFeature:", mejorFeature, "mapaFormulario:", mapaFormulario);
+    if (!mejorFeature || !mapaFormulario) return;
 
     const geom = mejorFeature.geometry;
+    console.log("[Debug] geom.type:", geom.type);
     let coords = [];
-
-    if (geom.type === "Polygon") {
-      coords = geom.coordinates[0];  // el anillo exterior
-    } else if (geom.type === "MultiPolygon") {
-      coords = geom.coordinates[0][0];  // el primer anillo del primer polígono
-    } else {
-      return;
-    }
+    if (geom.type === "Polygon") coords = geom.coordinates[0];
+    else if (geom.type === "MultiPolygon") coords = geom.coordinates[0][0];
+    else return;
+    console.log("[Debug] coords length:", coords.length);
+    console.log("[Debug] primer coord:", coords[0]);
 
     const lats = coords.map(c => c[1]);
     const lngs = coords.map(c => c[0]);
     const lat = (Math.min(...lats) + Math.max(...lats)) / 2;
     const lng = (Math.min(...lngs) + Math.max(...lngs)) / 2;
+    console.log("[Debug] lat, lng:", lat, lng);
 
-    if (isNaN(lat) || isNaN(lng)) {
-      console.error("[Debug] Centroide inválido:", lat, lng, geom);
-      return;
-    }
-
-    mapa.setView([lat, lng], 14);
+    if (isNaN(lat) || isNaN(lng)) return;
+    mapaFormulario.setView([lat, lng], 14);
   });
 
 }

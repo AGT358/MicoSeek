@@ -174,7 +174,7 @@ input[type="text"] {
 }
 
 #mapa-formulario {
-  height: 320px;
+  min-height: 300px;
   border-radius: 10px;
   margin: 0.75rem 0 0.5rem;
   border: 1px solid var(--borde);
@@ -287,12 +287,12 @@ button#btn-consultar:disabled {
   background: #e8f5e9;
 }
 
-#mapa {
+/* #mapa {
   height: 60vh;
   min-height: 320px;
   border-radius: 10px;
   margin-bottom: 1rem;
-}
+} */
 
 .aviso-pie {
   margin-top: 1rem;
@@ -448,10 +448,10 @@ button#btn-consultar:disabled {
 }
 
 
-/* Contenedor del mapa para posicionar la leyenda */
+/* Contenedor del mapa para posicionar la leyenda
 #mapa {
   position: relative;
-}
+} */
 
 #lista-candidatas li {
   padding: 0.5rem 0.6rem;
@@ -577,13 +577,13 @@ button#btn-consultar:disabled {
   flex-direction: column;
   min-height: 0;
   /* importante para que el flex-child no desborde */
-} */
 
-/* .zona-mapa #mapa-formulario {
+
+.zona-mapa #mapa-formulario {
   flex: 1;
   min-height: 0;
   border-radius: 10px;
-} */
+}
 
 .zona-ecosistemas {
   grid-column: 2 / 3;
@@ -840,4 +840,13 @@ Indicaciones en el medio
   .mapa-controles #btn-consultar {
     flex: 1 1 auto;
   }
+}
+
+.zona-ecosistemas {
+  grid-column: 2 / 3;
+  display: grid !important;
+  grid-template-rows: 1fr auto 1fr;
+  gap: 0.5rem;
+  min-height: 0;
+  overflow: hidden;
 }
