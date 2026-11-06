@@ -334,7 +334,9 @@ function mostrarResultados(datos, punto) {
           'Temperatura minima ultimos 20 dias: <strong>' + (p.t_min_media != null ? p.t_min_media : "-") + ' C</strong><br>' +
           'Heladas fuertes: <strong>' + (p.heladas_fuertes ? "Si" : "No") + '</strong><br>' +
           'Geología: suelo <strong>' + (p.geologia || "-") + '</strong><br>' +
+          'Orientación: <strong>' + (p.orientacion || "-") + '</strong><br>' +
           (p.altitud ? 'Altitud: <strong>' + Math.round(p.altitud) + ' m</strong><br>' : '') +
+
           '<em style="color:#666;font-size:0.85em">' + (p.motivo || '') + '</em>' +
           '</div>';
         layer.bindPopup(popupHtml);

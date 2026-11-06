@@ -49,6 +49,7 @@ def puntuar_especie(
     altitud_ok: bool,
     mes_actual: int | None = None,
     geologia: str | None = None, # nuevo parámetro para geología
+    orientacion: str | None = None, # nuevo parámetro para orientación
 ) -> dict:
     desglose = {}
  
@@ -93,16 +94,30 @@ def puntuar_especie(
         s_geologia = 1.0
         desglose["geologia"] = 1.0
 
+    # 8. Orientación
+    if orientacion and especie.get("orientacion_optima"):
+        if orientacion in especie["orientacion_optima"]:
+            s_orientacion = 1.0
+        elif orientacion == "plano":
+            s_orientacion = 0.8
+        else:
+            s_orientacion = 0.3
+        desglose["orientacion"] = round(s_orientacion, 2)
+    else:
+        s_orientacion = 1.0
+        desglose["orientacion"] = 1.0
+    
     # Reequilibrar pesos (bajar un poco los demás para meter geologia)
     pesos = {
-        "lluvia_60d": 0.08,
-        "lluvia_20d": 0.25,
-        "dias_lluvia_20d": 0.18,
-        "t_min": 0.13,
+        "lluvia_60d": 0.07,
+        "lluvia_20d": 0.22,
+        "dias_lluvia_20d": 0.16,
+        "t_min": 0.12,
         "t_max": 0.04,
-        "heladas": 0.13,
+        "heladas": 0.12,
         "altitud": 0.04,
-        "geologia": 0.10,
+        "geologia": 0.08,
+        "orientacion": 0.05,
     }
     # Sumar todos los factores, incluyendo geologia
     score = (
@@ -114,6 +129,7 @@ def puntuar_especie(
         + pesos["heladas"] * s_helada
         + pesos["altitud"] * s_altitud
         + pesos["geologia"] * s_geologia
+        + pesos["orientacion"] * s_orientacion
     )
 
     if dias < 3:
@@ -148,6 +164,8 @@ def _motivo(desglose: dict, especie: dict, score: float) -> str:
 
 
 def etiqueta(score: float) -> str:
+
+
     if score >= 0.65:
         return "verde"
     if score >= 0.40:

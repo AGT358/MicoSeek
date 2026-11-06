@@ -107,7 +107,7 @@ def _contiene_alucinacion(texto: str) -> bool:
 def generar_resumen_plantilla(
     especie_nombre: str, zona_txt: str, num_zonas: int, radio_km: float,
     mejor_habitat: str, mejor_color: str, mejor_prob: float, mejor_motivo: str,
-    fuera_de_temporada: bool, geologia: str | None = None,
+    fuera_de_temporada: bool, geologia: str, orientacion: str | None = None,
 ) -> str:
     if num_zonas == 0:
         txt = (
@@ -129,6 +129,8 @@ def generar_resumen_plantilla(
     )
     if geologia:
         txt += f"El suelo es de tipo {geologia}. "
+    if orientacion:
+        txt += f"La orientación es {orientacion}. "
     if fuera_de_temporada:
         txt += "AVISO: esta especie no está en su temporada habitual. "
     return txt + "Recuerda que estos datos son orientativos y no garantizan la presencia de setas."

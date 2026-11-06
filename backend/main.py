@@ -29,6 +29,7 @@ from backend.meteo import obtener_meteo, obtener_meteo_multiple
 from backend.geodatos import obtener_poligonos
 from backend.ia import generar_resumen_con_llm, generar_resumen_plantilla
 from backend.geologia import obtener_geologia
+from backend.orientacion import obtener_orientacion
 
 # ---------- Configuración ----------
 IA_ACTIVA = os.getenv("IA_ACTIVA", "false").lower() == "true"
@@ -269,6 +270,20 @@ async def consulta(c: Consulta):
     resultados_geo = await asyncio.gather(*[geo_celda(k) for k in celdas.keys()])
     geologia_por_celda = dict(resultados_geo)
 
+    # Obtener orientación por celda (con caché)
+    semaforo_orient = asyncio.Semaphore(5)
+
+    async def orient_celda(clave):
+        async with semaforo_orient:
+            try:
+                return clave, await obtener_orientacion(clave[0], clave[1])
+            except Exception as e:
+                print(f"[Main] Fallo orientación para {clave}: {e}")
+                return clave, None
+
+    resultados_orient = await asyncio.gather(*[orient_celda(k) for k in celdas.keys()])
+    orientacion_por_celda = dict(resultados_orient)
+
     # --- 5. Puntuar cada polígono ---
     features = []
     alt_lo, alt_hi = especie["altitud"]
@@ -283,6 +298,10 @@ async def consulta(c: Consulta):
         
         geologia = geologia_por_celda.get(_celda_meteo(p["lat"], p["lng"]))
         res = puntuar_especie(especie, meteo, True, altitud_ok, mes_actual, geologia)
+
+        orientacion = orientacion_por_celda.get(_celda_meteo(p["lat"], p["lng"]))
+        res = puntuar_especie(especie, meteo, True, altitud_ok, mes_actual, geologia, orientacion)
+
         if res["score"] < UMBRAL_FAVORABLE:
             continue
 
@@ -302,6 +321,7 @@ async def consulta(c: Consulta):
                 "t_min_media": meteo["t_min_media"],
                 "heladas_fuertes": meteo["heladas_fuertes"],
                 "geologia": geologia,
+                "orientacion": orientacion,
             },
         })
 
