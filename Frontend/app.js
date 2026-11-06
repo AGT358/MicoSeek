@@ -278,6 +278,18 @@ function mostrarResultados(datos, punto) {
   mapa = L.map("mapa", { zoomControl: true, scrollWheelZoom: true })
     .setView(datos.centro || [punto.lat, punto.lng], 11);
 
+      // Marcador del punto consultado
+  const centro = datos.centro || [punto.lat, punto.lng];
+    L.circleMarker(centro, {
+    radius: 8,
+    color: "#2e7d32",
+    fillColor: "#2e7d32",
+    fillOpacity: 0.9,
+    weight: 2
+  }).addTo(mapa).bindPopup(
+    "Punto consultado: " + centro[0].toFixed(4) + ", " + centro[1].toFixed(4)
+  );
+
   const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: "OpenStreetMap",
     maxZoom: 19,
@@ -308,7 +320,7 @@ function mostrarResultados(datos, punto) {
   capaResultados = L.featureGroup().addTo(mapa);
 
   const PALETA = {
-    verde: { fill: "#4ef108", stroke: "#4ef108" },
+    verde: { fill: "#f108bb", stroke: "#f108bb" },
     amarillo: { fill: "#FFA500", stroke: "#CC8400" },
     rojo: { fill: "#FF0000", stroke: "#CC0000" },
   };
