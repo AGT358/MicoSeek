@@ -434,14 +434,17 @@ button#btn-consultar:disabled {
 
 .btn-enlace {
   background: transparent;
-  border: none;
   color: var(--verde);
-  font-size: 0.95rem;
-  font-weight: 600;
+  border: none;
   padding: 0.4rem 0;
-  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
   text-decoration: underline;
+  margin-top: 0.5rem;
+}
+.btn-enlace:hover {
+  color: #1b5e20;
 }
 
 
@@ -463,10 +466,6 @@ button#btn-consultar:disabled {
 
 #lista-candidatas li:last-child {
   border-bottom: none;
-}
-
-.btn-enlace:hover {
-  color: var(--verde-oscuro);
 }
 
 /* Modal */
