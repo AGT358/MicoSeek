@@ -16,6 +16,118 @@ const btnConsultar = $("btn-consultar");
 const vistaFormulario = $("vista-formulario");
 const vistaResultados = $("vista-resultados");
 
+// ---------- Funcion MostrarResultados ----------
+
+function mostrarResultados(datos, punto) {
+  // 1. Cambiar paneles: ocultar búsqueda, mostrar resultados
+  const panelBusqueda = document.getElementById("panel-busqueda");
+  if (panelBusqueda) panelBusqueda.classList.add("oculto");
+  vistaResultados.classList.remove("oculto");
+
+  // 2. Asegurarse de que el mapa existe
+  if (!mapaFormulario) inicializarMapaFormulario();
+
+  // 3. Quitar la capa de resultados y el control anterior (si existen)
+  if (capaResultados) {
+    mapaFormulario.removeLayer(capaResultados);
+    capaResultados = null;
+  }
+  if (window.controlPoligonos) {
+    mapaFormulario.removeControl(window.controlPoligonos);
+    window.controlPoligonos = null;
+  }
+
+  // 4. Reutilizar el marcador de selección (o crear uno nuevo)
+  const centro = datos.centro || [punto.lat, punto.lng];
+  if (marcadorFormulario) {
+    marcadorFormulario.setLatLng(centro);
+    marcadorFormulario.bindPopup("Punto consultado: " + centro[0].toFixed(4) + ", " + centro[1].toFixed(4));
+  } else {
+    marcadorFormulario = L.marker(centro, { title: "Punto consultado" })
+      .addTo(mapaFormulario)
+      .bindPopup("Punto consultado: " + centro[0].toFixed(4) + ", " + centro[1].toFixed(4));
+  }
+
+  const PALETA = {
+    verde: { fill: "#00FF00", stroke: "#00CC00" },
+    amarillo: { fill: "#FFA500", stroke: "#CC8400" },
+    rojo: { fill: "#FF0000", stroke: "#CC0000" },
+  };
+
+  const features = datos.geojson?.features || [];
+  mejorFeature = features.length > 0 ? features[0] : null;
+
+  const btnMejor = $("btn-mejor-zona");
+  if (btnMejor) {
+    if (mejorFeature) btnMejor.classList.remove("oculto");
+    else btnMejor.classList.add("oculto");
+  }
+
+  if (features.length > 0) {
+    const capaPoligonos = L.geoJSON(datos.geojson, {
+      style: function (feature) {
+        const p = PALETA[feature.properties.color] || { fill: "#888", stroke: "#555" };
+        return { color: p.stroke, weight: 1.5, fillColor: p.fill, fillOpacity: 0.25 };
+      },
+      onEachFeature: function (feature, layer) {
+        const p = feature.properties;
+        const pct = Math.round((p.prob || 0) * 100);
+        const colorTxt = p.color === "verde" ? "Alta" : "Media";
+        
+        const popupHtml =
+          '<div style="min-width:200px">' +
+            '<strong style="text-transform:capitalize">' + p.habitat + '</strong><br>' +
+            '<span style="color:#2e7d32;font-weight:600">' + colorTxt + '</span> - ' + pct + '%<br>' +
+            '<hr style="margin:6px 0;border:none;border-top:1px solid #ddd">' +
+            '<strong>Mejores especies:</strong><br>' +
+            (p.top_especies && p.top_especies.length > 0
+              ? p.top_especies.slice(0, 3).map(e =>
+                  '• ' + e.nombre + ' (' + Math.round(e.score * 100) + '%)'
+                ).join('<br>')
+              : '—') +
+            '<details style="margin-top:6px">' +
+              '<summary style="cursor:pointer;color:#2e7d32;font-size:0.85em">Ver detalle técnico</summary>' +
+              '<div style="margin-top:6px;font-size:0.85em">' +
+                'Lluvia 2 meses: ' + (p.lluvia_60d != null ? p.lluvia_60d : "-") + ' mm<br>' +
+                'Lluvia 20 días: ' + (p.lluvia_20d != null ? p.lluvia_20d : "-") + ' mm<br>' +
+                'Días de lluvia (20d): ' + (p.dias_lluvia_20d != null ? p.dias_lluvia_20d : "-") + '<br>' +
+                'Tmin 20 días: ' + (p.t_min_media != null ? p.t_min_media : "-") + ' °C<br>' +
+                'Heladas: ' + (p.heladas_fuertes ? "Sí" : "No") + '<br>' +
+                'Geología: ' + (p.geologia || "-") + '<br>' +
+                'Orientación: ' + (p.orientacion || "-") + '<br>' +
+                (p.altitud ? 'Altitud: ' + Math.round(p.altitud) + ' m<br>' : '') +
+                '<em style="color:#666">' + (p.motivo || '') + '</em>' +
+              '</div>' +
+            '</details>' +
+          '</div>';
+          
+        layer.bindPopup(popupHtml);
+        layer.on("mouseover", function () { layer.setStyle({ weight: 3, fillOpacity: 0.4 }); });
+        layer.on("mouseout", function () { layer.setStyle({ weight: 1.5, fillOpacity: 0.25 }); });
+      },
+    });
+
+    window.controlPoligonos = L.control.layers(
+      null,
+      { "Mostrar zonas favorables": capaPoligonos },
+      { position: 'topleft', collapsed: false }
+    ).addTo(mapaFormulario);
+
+    capaPoligonos.addTo(mapaFormulario);
+    capaResultados = capaPoligonos;
+
+    const bounds = capaPoligonos.getBounds();
+    if (bounds.isValid()) {
+      mapaFormulario.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+    }
+  }
+
+  const resumenEl = $("texto-resumen");
+  if (resumenEl) resumenEl.textContent = datos.resumen || "Sin resumen disponible.";
+
+  setTimeout(function () { mapaFormulario.invalidateSize(); }, 100);
+}
+
 // ---------- Carga de especies ----------
 async function cargarEspecies() {
   try {
@@ -157,16 +269,14 @@ function actualizarBoton() {
 }
 
 // ---------- Selección por tarjetas de ecosistema ----------
-document.querySelectorAll('.tarjeta-ecosistema').forEach(tarjeta => {
-  tarjeta.addEventListener('click', () => {
-    const especieId = tarjeta.dataset.especie;
+document.querySelectorAll('.btn-eco').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const especieId = btn.dataset.especie;
     const selector = $("selector-especie");
     if (selector && especieId) {
       selector.value = especieId;
       especiePrincipal = especieId;
       selector.dispatchEvent(new Event("change"));
-      document.querySelectorAll('.tarjeta-ecosistema').forEach(t => t.classList.remove('seleccionada'));
-      tarjeta.classList.add('seleccionada');
     }
   });
 });
@@ -276,112 +386,40 @@ if (btnConsultar) {
 // ---------- Resultados ----------
 
 
-function mostrarResultados(datos, punto) {
-  // Ocultar solo los controles de la columna derecha (ecosistemas), no el mapa
-  document.querySelectorAll(".zona-ecosistemas").forEach(el => el.classList.add("oculto"));
+const btnNueva = $("btn-nueva");
+if (btnNueva) {
+  btnNueva.addEventListener("click", () => {
+    // 1. Cambiar paneles
+    document.getElementById("panel-busqueda").classList.remove("oculto");
+    vistaResultados.classList.add("oculto");
 
-  vistaResultados.classList.remove("oculto");
-
-  // Asegurarse de que el mapa existe
-  if (!mapaFormulario) inicializarMapaFormulario();
-
-  // Quitar la capa de resultados anterior (si existe)
-  if (capaResultados) {
-    mapaFormulario.removeLayer(capaResultados);
-    capaResultados = null;
-  }
-
-  // // Quitar el marcador de selección (si existe)
-  // if (marcadorFormulario) {
-  //   mapaFormulario.removeLayer(marcadorFormulario);
-  //   marcadorFormulario = null;
-  // }
-
-    
-  // Reutilizar el marcador de selección (o crear uno nuevo si no existe)
-  const centro = datos.centro || [punto.lat, punto.lng];
-  if (marcadorFormulario) {
-    // Mover el marcador existente al centro de la consulta
-    marcadorFormulario.setLatLng(centro);
-    marcadorFormulario.bindPopup("Punto consultado: " + centro[0].toFixed(4) + ", " + centro[1].toFixed(4));
-  } else {
-    // Si no hay marcador, crear uno nuevo
-    marcadorFormulario = L.marker(centro, { title: "Punto consultado" })
-      .addTo(mapaFormulario)
-      .bindPopup("Punto consultado: " + centro[0].toFixed(4) + ", " + centro[1].toFixed(4));
-  }
-
-  // Crear la capa de resultados (GeoJSON)
-  capaResultados = L.featureGroup().addTo(mapaFormulario);
-
-  const PALETA = {
-    verde: { fill: "#00FF00", stroke: "#00CC00" },
-    amarillo: { fill: "#FFA500", stroke: "#CC8400" },
-    rojo: { fill: "#FF0000", stroke: "#CC0000" },
-  };
-
-  const features = datos.geojson?.features || [];
-  mejorFeature = features.length > 0 ? features[0] : null;
-
-  const btnMejor = $("btn-mejor-zona");
-  if (btnMejor) {
-    if (mejorFeature) btnMejor.classList.remove("oculto");
-    else btnMejor.classList.add("oculto");
-  }
-
-  if (features.length > 0) {
-    L.geoJSON(datos.geojson, {
-      style: function (feature) {
-        const p = PALETA[feature.properties.color] || { fill: "#888", stroke: "#555" };
-        return { color: p.stroke, weight: 1.5, fillColor: p.fill, fillOpacity: 0.25 };
-      },
-      onEachFeature: function (feature, layer) {
-        const p = feature.properties;
-        const pct = Math.round((p.prob || 0) * 100);
-        const colorTxt = p.color === "verde" ? "Alta" : "Media";
-        const popupHtml =
-          '<div style="min-width:200px">' +
-          '<strong style="text-transform:capitalize">' + p.habitat + '</strong><br>' +
-          '<span style="color:#2e7d32;font-weight:600">' + colorTxt + '</span> - ' + pct + '%<br>' +
-          '<hr style="margin:6px 0;border:none;border-top:1px solid #ddd">' +
-          '<strong>Mejores especies:</strong><br>' +
-          (p.top_especies && p.top_especies.length > 0
-            ? p.top_especies.slice(0, 3).map(e =>
-              '• ' + e.nombre + ' (' + Math.round(e.score * 100) + '%)'
-            ).join('<br>')
-            : '—') +
-          '<details style="margin-top:6px">' +
-          '<summary style="cursor:pointer;color:#2e7d32;font-size:0.85em">Ver detalle técnico</summary>' +
-          '<div style="margin-top:6px;font-size:0.85em">' +
-          'Lluvia 2 meses: ' + (p.lluvia_60d != null ? p.lluvia_60d : "-") + ' mm<br>' +
-          'Lluvia 20 días: ' + (p.lluvia_20d != null ? p.lluvia_20d : "-") + ' mm<br>' +
-          'Días de lluvia (20d): ' + (p.dias_lluvia_20d != null ? p.dias_lluvia_20d : "-") + '<br>' +
-          'Tmin 20 días: ' + (p.t_min_media != null ? p.t_min_media : "-") + ' °C<br>' +
-          'Heladas: ' + (p.heladas_fuertes ? "Sí" : "No") + '<br>' +
-          'Geología: ' + (p.geologia || "-") + '<br>' +
-          'Orientación: ' + (p.orientacion || "-") + '<br>' +
-          (p.altitud ? 'Altitud: ' + Math.round(p.altitud) + ' m<br>' : '') +
-          '<em style="color:#666">' + (p.motivo || '') + '</em>' +
-          '</div>' +
-          '</details>' +
-          '</div>';
-        layer.bindPopup(popupHtml);
-        layer.on("mouseover", function () { layer.setStyle({ weight: 3, fillOpacity: 0.4 }); });
-        layer.on("mouseout", function () { layer.setStyle({ weight: 1.5, fillOpacity: 0.25 }); });
-      },
-    }).addTo(capaResultados);
-
-    // Ajustar la vista a los polígonos
-    const bounds = capaResultados.getBounds();
-    if (bounds.isValid()) {
-      mapaFormulario.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
+    // 2. Limpiar capa de polígonos y control
+    if (capaResultados) {
+      mapaFormulario.removeLayer(capaResultados);
+      capaResultados = null;
     }
-  }
+    if (window.controlPoligonos) {
+      mapaFormulario.removeControl(window.controlPoligonos);
+      window.controlPoligonos = null;
+    }
 
-  const resumenEl = $("texto-resumen");
-  if (resumenEl) resumenEl.textContent = datos.resumen || "Sin resumen disponible.";
+    // 3. Quitar el marcador del punto consultado
+    if (marcadorFormulario) {
+      mapaFormulario.removeLayer(marcadorFormulario);
+      marcadorFormulario = null;
+    }
 
-  setTimeout(function () { mapaFormulario.invalidateSize(); }, 100);
+    // 4. Restaurar la vista
+    mapaFormulario.setView([40.4168, -3.7038], 6);
+
+    btnConsultar.textContent = "Consultar probabilidad";
+    actualizarBoton();
+
+    const btnMejor = $("btn-mejor-zona");
+    if (btnMejor) btnMejor.classList.add("oculto");
+
+    setTimeout(() => mapaFormulario.invalidateSize(), 100);
+  });
 }
 
 async function cargarConfigIA() {
@@ -414,46 +452,7 @@ async function cargarConfigIA() {
 
 // ---------- Nueva consulta ----------
 
-const btnNueva = $("btn-nueva");
 
-const controles = document.querySelectorAll(".zona-ecosistemas, .mapa-controles");
-controles.forEach(el => el.classList.remove("oculto"));
-
-if (btnNueva) {
-  btnNueva.addEventListener("click", () => {
-    vistaResultados.classList.add("oculto");
-    vistaFormulario.classList.remove("oculto");
-
-    // Quitar la capa de resultados
-    if (capaResultados) {
-      mapaFormulario.removeLayer(capaResultados);
-      capaResultados = null;
-    }
-    // // Quitar el marcador del punto consultado (el que se añadió en mostrarResultados)
-    // mapaFormulario.eachLayer(function (layer) {
-    //   if (layer instanceof L.Marker && layer.getPopup() && layer.getPopup().getContent().includes("Punto consultado")) {
-    //     mapaFormulario.removeLayer(layer);
-    //   }
-    // });
-
-    // Quitar el marcador del punto consultado
-    if (marcadorFormulario) {
-      mapaFormulario.removeLayer(marcadorFormulario);
-      marcadorFormulario = null;
-    }
-
-    // Restaurar la vista inicial
-    mapaFormulario.setView([40.4168, -3.7038], 6);
-
-    btnConsultar.textContent = "Consultar probabilidad";
-    actualizarBoton();
-
-    const btnMejor = $("btn-mejor-zona");
-    if (btnMejor) btnMejor.classList.add("oculto");
-
-    setTimeout(() => mapaFormulario.invalidateSize(), 100);
-  });
-}
 
 //Listener para el botón de "Ver la mejor zona en el mapa"
 const btnMejorZona = $("btn-mejor-zona");
