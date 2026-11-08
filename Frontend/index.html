@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -8,6 +9,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="style.css?v=2" />
 </head>
+
 <body>
 
   <!-- EL MAPA A PANTALLA COMPLETA -->
@@ -29,11 +31,11 @@
 
   <!-- PANEL LATERAL DERECHO -->
   <aside class="panel-lateral">
-    
+
     <!-- TARJETA 1: BÚSQUEDA -->
     <div class="tarjeta-panel" id="panel-busqueda">
       <h2>¿Qué buscas?</h2>
-      
+
       <div class="input-group">
         <input type="text" id="ubicacion" placeholder="Municipio o lugar..." autocomplete="off">
         <button type="button" id="btn-buscar-ubicacion" class="btn-primary-inline">🔍</button>
@@ -56,7 +58,15 @@
     </div>
 
     <!-- TARJETA 2: RESULTADOS (Oculta hasta consultar) -->
+
+
     <div class="tarjeta-panel oculto" id="vista-resultados">
+      
+      <!-- Drag Handle -->
+      <div class="drag-handle" id="drag-handle">
+        <div class="drag-bar"></div>
+      </div>
+
       <div class="resultados-header">
         <h2>Resultados</h2>
         <button id="btn-nueva" class="btn-text">← Nueva consulta</button>
@@ -69,7 +79,13 @@
       <button type="button" id="btn-mejor-zona" class="btn-enlace oculto">
         🎯 Ver la mejor zona en el mapa
       </button>
-      
+
+      <!-- NUEVO CHECKBOX AQUÍ -->
+      <label class="toggle-poligonos">
+        <input type="checkbox" id="toggle-poligonos" checked>
+        Mostrar zonas favorables
+      </label>
+
       <p class="aviso-pie">
         ⚠️ Resultados orientativos. No identifica setas.
       </p>
@@ -99,4 +115,5 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="app.js?v=90"></script>
 </body>
+
 </html>

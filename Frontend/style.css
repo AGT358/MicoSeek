@@ -16,7 +16,7 @@ body {
   margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   color: var(--texto);
-  overflow: hidden; /* Evita el scroll de la página */
+  overflow: hidden; /* Evita el scroll de la página entera */
 }
 
 /* --- MAPA A PANTALLA COMPLETA --- */
@@ -27,6 +27,12 @@ body {
   width: 100%;
   height: 100%;
   z-index: 1;
+  background-color: #e5e5e5;
+}
+
+/* Asegurar que las capas de Leaflet no se coman los eventos del panel */
+.leaflet-container {
+  touch-action: none;
 }
 
 /* --- CABECERA FLOTANTE --- */
@@ -34,7 +40,7 @@ body {
   position: fixed;
   top: 20px;
   left: 20px;
-  right: 380px; /* Deja espacio para el panel lateral */
+  right: 380px;
   height: 50px;
   background: var(--blanco);
   border-radius: var(--radio);
@@ -53,7 +59,7 @@ body {
 .topbar-actions { display: flex; gap: 10px; align-items: center; }
 
 .btn-icon {
-  background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 5px;
+  background: none; border: none; font-size: 0.9rem; font-weight: 600; cursor: pointer; padding: 5px; color: var(--texto);
 }
 
 /* --- PANEL LATERAL DERECHO --- */
@@ -62,7 +68,7 @@ body {
   top: 20px;
   right: 20px;
   width: 340px;
-  max-height: calc(100vh - 40px);
+  height: calc(100vh - 40px);
   z-index: 1000;
   display: flex;
   flex-direction: column;
@@ -70,13 +76,17 @@ body {
   overflow-y: auto;
   padding-bottom: 20px;
 }
-
 /* Tarjetas del panel */
 .tarjeta-panel {
   background: var(--blanco);
   border-radius: var(--radio);
   box-shadow: var(--sombra);
   padding: 20px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto; /* Scroll interno de la tarjeta */
+  touch-action: pan-y;
 }
 
 .tarjeta-panel h2 {
@@ -99,6 +109,7 @@ body {
   border-radius: 8px;
   font-size: 0.9rem;
   outline: none;
+  font-family: inherit;
 }
 
 .input-group input:focus, .select-group select:focus {
@@ -150,9 +161,7 @@ body {
   transition: background 0.2s;
 }
 
-.btn-eco:hover {
-  background: #e9ecef;
-}
+.btn-eco:hover { background: #e9ecef; }
 
 /* Botón principal */
 button#btn-consultar {
@@ -176,6 +185,16 @@ button#btn-consultar:not(:disabled):hover {
 }
 
 /* --- RESULTADOS --- */
+#vista-resultados {
+  flex: 1; /* Ocupa todo el alto que sobra */
+  min-height: 0; /* ¡Clave para que flex funcione con scroll! */
+  overflow-y: auto; /* Aquí va el scroll */
+  display: flex;
+  flex-direction: column;
+  -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
+  padding-right: 5px; /* Un poco de margen para que la barra no pise el texto */
+}
+
 .resultados-header {
   display: flex;
   justify-content: space-between;
@@ -183,6 +202,7 @@ button#btn-consultar:not(:disabled):hover {
   margin-bottom: 15px;
   border-bottom: 1px solid var(--borde);
   padding-bottom: 10px;
+  flex-shrink: 0;
 }
 
 .resultados-header h2 { margin: 0; }
@@ -214,6 +234,7 @@ button#btn-consultar:not(:disabled):hover {
   font-weight: 600;
   margin-top: 15px;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .btn-enlace:hover { background: #e9ecef; }
@@ -226,12 +247,12 @@ button#btn-consultar:not(:disabled):hover {
   border-radius: 8px;
   margin-top: 15px;
   border: 1px solid #fcd34d;
+  flex-shrink: 0;
 }
 
-/* Ocultar elementos */
+/* --- MODALES Y OVERLAYS --- */
 .oculto { display: none !important; }
 
-/* Modales y Overlays (Se mantienen igual) */
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 2000; }
 .modal-contenido { background: white; padding: 20px; border-radius: 12px; max-width: 400px; width: 90%; }
 .modal-botones { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
@@ -243,11 +264,7 @@ button#btn-consultar:not(:disabled):hover {
 .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--verde); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-/* --- AJUSTES DEL MAPA PARA EL DISEÑO FLOTANTE --- */
-/* Mover el control de zoom de Leaflet a la izquierda */
-.leaflet-left { left: 20px; top: 90px; }
-
-/* Estilo para el botón de polígonos */
+/* Estilo para el botón de polígonos (Leaflet) */
 .leaflet-control-layers {
   background: var(--blanco) !important;
   border-radius: 8px !important;
@@ -259,64 +276,163 @@ button#btn-consultar:not(:disabled):hover {
 .leaflet-control-layers label { margin: 0 !important; display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .leaflet-control-layers-selector { margin: 0 !important; accent-color: var(--verde); }
 
-/* Forzar que los inputs y selects se comporten igual en todos los navegadores */
-.input-group input, 
-.select-group select {
-  width: 100%;
-  box-sizing: border-box; /* El padding no suma al ancho total */
-  height: 42px; /* Una altura fija y cómoda para hacer clic */
-  padding: 0 12px;
-  font-size: 0.95rem;
-  font-family: inherit; /* Que use la misma fuente que el resto de la web */
-  -webkit-appearance: none; /* Quita el estilo por defecto de Safari/Chrome */
-  appearance: none;
-  border: 1px solid var(--borde);
-  border-radius: 8px;
-  background-color: var(--blanco);
+/* Bajar el control de capas (y el de zoom) para que no lo tape la barra superior */
+.leaflet-top.leaflet-left {
+  top: 80px; /* Lo bajamos para que quede debajo de la barra superior */
+  left: 20px;
 }
 
-/* Flechita personalizada para el select (para que no se vea fea) */
-.select-group select {
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-  background-size: 16px;
-  padding-right: 30px;
+/* En móvil, lo bajamos un poco más para que no choque con nada */
+@media (max-width: 768px) {
+  .leaflet-top.leaflet-left {
+    top: 70px; 
+    left: 10px;
+  }
+}
+
+/* Estilo para el toggle de polígonos */
+.toggle-poligonos {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 15px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: var(--texto);
+  background: #f8f9fa;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--borde);
+}
+
+.toggle-poligonos input {
+  margin: 0;
+  accent-color: var(--verde);
+  width: 16px;
+  height: 16px;
   cursor: pointer;
 }
 
-/* Asegurar que el mapa ocupe bien el espacio */
-#mapa-formulario {
-  position: fixed;
-  top: 0;
-  left: 0;
+/* --- DRAG HANDLE (Solo visible en móvil) --- */
+.drag-handle {
+  display: none; /* Oculto en escritorio */
   width: 100%;
-  height: 100vh;
-  z-index: 1; /* El mapa al fondo */
+  padding: 10px 0;
+  cursor: grab;
+  touch-action: none; /* Evita que el navegador interfiera con el gesto */
 }
 
-/* Asegurar que la barra y el panel estén POR ENCIMA del mapa */
-.topbar, .panel-lateral {
-  z-index: 1000; 
+.drag-bar {
+  width: 40px;
+  height: 5px;
+  background: #ccc;
+  border-radius: 3px;
+  margin: 0 auto;
 }
 
-/* Forzar que el mapa se vea por encima de todo fondo, pero por debajo de la UI */
-#mapa-formulario {
-  z-index: 1 !important;
-  background: #e5e5e5; /* Un gris para saber si el div está ahí */
+
+/* --- AJUSTES PARA EL MÓVIL --- */
+
+@media (max-width: 768px) {
+  
+  .topbar {
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    height: 45px;
+    padding: 0 10px;
+  }
+  .logo h1 { font-size: 1rem; }
+  .logo-icon { font-size: 1.2rem; }
+  .topbar-actions #btn-mi-ubicacion { display: none; }
+
+  /* Panel por defecto (formulario) */
+  .panel-lateral {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 40vh;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -4px 15px rgba(0,0,0,0.15);
+    padding: 15px 10px;
+    gap: 0;
+    overflow: hidden;
+    transition: height 0.3s ease; /* Animación suave al cambiar de tamaño */
+  }
+
+  /* Panel cuando hay resultados (33% de la pantalla) */
+  .panel-lateral:has(#vista-resultados:not(.oculto)) {
+    height: 33vh !important; /* Forzamos que sea 1/3 de la pantalla */
+    padding: 10px;
+    border-top: 2px solid var(--verde);
+  }
+
+  #panel-busqueda {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #vista-resultados {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Subimos los botones de zoom de Leaflet para que no queden debajo del panel */
+  .leaflet-bottom {
+    bottom: 40vh !important;
+    transition: bottom 0.3s ease;
+  }
+
+  .ecosistemas-rapidos { flex-direction: column; }
+  .btn-eco { padding: 12px; font-size: 0.9rem; }
 }
 
-/* Las teselas de Leaflet deben ser visibles */
-.leaflet-tile-pane {
-  z-index: 2 !important;
+/* --- AJUSTES PARA EL MÓVIL (BOTTOM SHEET) --- */
+@media (max-width: 768px) {
+  .drag-handle {
+    display: block; /* Mostramos el asa en móvil */
+  }
+
+  .panel-lateral {
+    /* ... (tus estilos actuales del panel) ... */
+    transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1); /* Animación suave */
+    transform: translateY(0); /* Estado por defecto */
+  }
+
+  /* Clase que añadiremos con JS para esconder el panel */
+  .panel-lateral.oculto-bottom-sheet {
+    transform: translateY(calc(100% - 40px)); /* Deja solo el drag handle visible */
+  }
+
+  /* Cuando está oculto, el mapa ocupa toda la pantalla y los controles bajan */
+  .panel-lateral.oculto-bottom-sheet ~ .leaflet-container .leaflet-bottom {
+    bottom: 40px !important;
+  }
 }
 
-/* Asegurar que la barra y el panel flotan por encima */
-.topbar, .panel-lateral {
-  z-index: 9999 !important;
-}
+@media (max-width: 768px) {
+  .panel-lateral {
+    /* ... tus estilos actuales ... */
+    transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  }
 
-/* Si el body tiene un fondo blanco que tapa, lo quitamos */
-body {
-  background: transparent !important;
+  .panel-lateral.oculto-bottom-sheet {
+    /* Lo desplazamos hacia abajo, dejando solo el drag handle visible */
+    transform: translateY(calc(100% - 70px)); 
+  }
+
+  /* El drag handle debe estar siempre visible y con un z-index alto */
+  .drag-handle {
+    position: relative;
+    z-index: 10;
+    padding: 12px 0; /* Un poco más de área de toque */
+  }
 }
