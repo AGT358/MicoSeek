@@ -395,6 +395,34 @@ button#btn-consultar:not(:disabled):hover {
   .btn-eco { padding: 12px; font-size: 0.9rem; }
 }
 
+/* Separadores de texto dentro del panel */
+.separador-texto {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: var(--texto-suave);
+  font-size: 0.75rem;
+  margin: 15px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.separador-texto::before,
+.separador-texto::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid var(--borde);
+}
+
+.separador-texto span {
+  padding: 0 10px;
+}
+
+/* Ajustar un poco los botones de ecosistema para que quepan bien */
+.ecosistemas-rapidos {
+  margin-bottom: 0; /* Quitamos el margen inferior porque ya lo da el separador */
+}
+
 /* --- AJUSTES PARA EL MÓVIL (BOTTOM SHEET) --- */
 @media (max-width: 768px) {
   .drag-handle {

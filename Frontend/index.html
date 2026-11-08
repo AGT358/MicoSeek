@@ -32,36 +32,48 @@
   <!-- PANEL LATERAL DERECHO -->
   <aside class="panel-lateral">
 
-    <!-- TARJETA 1: BÚSQUEDA -->
+        <!-- TARJETA 1: BÚSQUEDA -->
     <div class="tarjeta-panel" id="panel-busqueda">
-      <h2>¿Qué buscas?</h2>
+      <h2>Buscar zonas</h2>
+      
+      <!-- 1. Botón principal -->
+      <button id="btn-consultar" disabled style="margin-bottom: 20px;">Buscar probabilidad</button>
 
-      <div class="input-group">
-        <input type="text" id="ubicacion" placeholder="Municipio o lugar..." autocomplete="off">
-        <button type="button" id="btn-buscar-ubicacion" class="btn-primary-inline">🔍</button>
-      </div>
-      <p id="coords-seleccionadas" class="coords">Toca el mapa para marcar el punto.</p>
-
-      <div class="select-group">
-        <label for="selector-especie">Especie</label>
-        <select id="selector-especie">
-          <option value="">— Elegir especie —</option>
-        </select>
-      </div>
-
+      <!-- 2. Elección rápida por ecosistema -->
       <div class="ecosistemas-rapidos">
         <button class="btn-eco" data-especie="lactarius_deliciosus">🌲 Bosque (Níscalo)</button>
         <button class="btn-eco" data-especie="pleurotus_eryngii">🌾 Pasto (Seta de cardo)</button>
       </div>
 
-      <button id="btn-consultar" disabled>Consultar probabilidad</button>
+      <!-- 3. Elección manual por especie -->
+      <div class="separador-texto">
+        <span>O también se puede elegir por especie</span>
+      </div>
+
+      <div class="select-group">
+        <select id="selector-especie">
+          <option value="">— Elegir especie —</option>
+        </select>
+      </div>
+
+      <!-- 4. Ubicación -->
+      <div class="separador-texto">
+        <span>Elegir municipio O HACER CLICK EN EL MAPA</span>
+      </div>
+
+      <div class="input-group">
+        <input type="text" id="ubicacion" placeholder="Escribe un municipio..." autocomplete="off">
+        <button type="button" id="btn-buscar-ubicacion" class="btn-primary-inline">🔍</button>
+      </div>
+      
+      <p id="coords-seleccionadas" class="coords">Toca el mapa para marcar el punto.</p>
     </div>
 
     <!-- TARJETA 2: RESULTADOS (Oculta hasta consultar) -->
 
 
     <div class="tarjeta-panel oculto" id="vista-resultados">
-      
+
       <!-- Drag Handle -->
       <div class="drag-handle" id="drag-handle">
         <div class="drag-bar"></div>

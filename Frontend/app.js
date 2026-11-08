@@ -444,7 +444,7 @@ if (btnConsultar) {
       console.error("Fallo en consulta:", err);
       alert("No se pudo completar la consulta: " + (err && err.message ? err.message : err));
     } finally {
-      btnConsultar.textContent = "Consultar probabilidad";
+      btnConsultar.textContent = "Consultar zonas";
       actualizarBoton();
     }
   });
