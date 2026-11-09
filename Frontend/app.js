@@ -85,9 +85,9 @@ function mostrarResultados(datos, punto) {
               '• ' + e.nombre + ' (' + Math.round(e.score * 100) + '%)'
             ).join('<br>')
             : '—') +
-          '<details style="margin-top:6px">' +
-          '<summary style="cursor:pointer;color:#2e7d32;font-size:0.85em">Ver detalle técnico</summary>' +
-          '<div style="margin-top:6px;font-size:0.85em">' +
+          '<details style="margin-top:8px">' +
+          '<summary style="cursor:pointer;color:#2e7d32;font-size:0.95rem;font-weight:600;margin-bottom:6px;">Ver detalle técnico</summary>' +
+          '<div style="margin-top:6px;font-size:0.9rem;line-height:1.5;">' +
           'Lluvia 2 meses: ' + (p.lluvia_60d != null ? p.lluvia_60d : "-") + ' mm<br>' +
           'Lluvia 20 días: ' + (p.lluvia_20d != null ? p.lluvia_20d : "-") + ' mm<br>' +
           'Días de lluvia (20d): ' + (p.dias_lluvia_20d != null ? p.dias_lluvia_20d : "-") + '<br>' +
@@ -96,7 +96,7 @@ function mostrarResultados(datos, punto) {
           'Geología: ' + (p.geologia || "-") + '<br>' +
           'Orientación: ' + (p.orientacion || "-") + '<br>' +
           (p.altitud ? 'Altitud: ' + Math.round(p.altitud) + ' m<br>' : '') +
-          '<em style="color:#666">' + (p.motivo || '') + '</em>' +
+          '<em style="color:#666;display:block;margin-top:6px;">' + (p.motivo || '') + '</em>' +
           '</div>' +
           '</details>' +
           '</div>';
@@ -465,7 +465,7 @@ if (btnNueva) {
       mapaFormulario.removeLayer(capaResultados);
       capaResultados = null;
     }
-    
+
     // 3. Quitar el marcador del punto consultado
     if (marcadorFormulario) {
       mapaFormulario.removeLayer(marcadorFormulario);
@@ -549,7 +549,7 @@ if (btnMejorZona) {
 document.addEventListener("DOMContentLoaded", () => {
   const panel = document.querySelector(".panel-lateral");
   const dragHandle = document.getElementById("drag-handle");
-  
+
   if (!panel || !dragHandle) return;
 
   let startY = 0;
@@ -571,10 +571,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!isDragging) return;
     currentY = e.touches[0].clientY;
     const deltaY = currentY - startY;
-    
+
     // Si el panel está oculto, permitimos arrastrar hacia arriba
     const isHidden = panel.classList.contains("oculto-bottom-sheet");
-    
+
     if (isHidden) {
       // Si está oculto, solo permitimos moverlo hacia arriba (delta negativo)
       // Calculamos cuánto ha subido respecto a la posición de "oculto"
@@ -599,7 +599,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const deltaY = currentY - startY;
     const isHidden = panel.classList.contains("oculto-bottom-sheet");
-    
+
     if (isHidden) {
       // Si estaba oculto y ha arrastrado hacia arriba (delta negativo) más de -80px, abrir
       if (deltaY < -80) {
@@ -620,6 +620,28 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+
+// ---------- Lógica del Modal de Información ----------
+const btnInfo = $("btn-info");
+const modalInfo = $("modal-info");
+const btnCerrarInfo = $("btn-cerrar-info");
+
+if (btnInfo && modalInfo && btnCerrarInfo) {
+  btnInfo.addEventListener("click", () => {
+    modalInfo.classList.remove("oculto");
+  });
+
+  btnCerrarInfo.addEventListener("click", () => {
+    modalInfo.classList.add("oculto");
+  });
+
+  // Cerrar si se hace clic fuera del modal
+  modalInfo.addEventListener("click", (e) => {
+    if (e.target === modalInfo) {
+      modalInfo.classList.add("oculto");
+    }
+  });
+}
 
 // ---------- Init ----------
 cargarEspecies();
