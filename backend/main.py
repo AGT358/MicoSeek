@@ -125,6 +125,9 @@ def _escribir_cache(clave: tuple, respuesta: dict):
     CACHE_CONSULTAS[clave] = (time.time(), respuesta)
 
 # ---------- Endpoints ----------
+
+
+
 @app.get("/api/especies")
 def listar_especies():
     return [
@@ -161,8 +164,13 @@ def clear_cache(admin_key: str = ""):
     return {"ok": True, "mensaje": "Caché limpiada"}
 
 
+
 @app.post("/api/consulta")
 async def consulta(c: Consulta):
+    import time
+    t_inicio = time.time()
+    print(f"\n[Debug] --- INICIO CONSULTA: {c.especie_principal} ---")
+
     if c.especie_principal not in ESPECIES:
         return {"error": "Especie no válida"}
 
@@ -170,17 +178,14 @@ async def consulta(c: Consulta):
     especie = ESPECIES[c.especie_principal]
     zona_txt = f"({c.lat:.3f}, {c.lng:.3f})"
 
+    # Caché en memoria
     clave_cache = _clave_cache(c.lat, c.lng, c.especie_principal, c.confirmar_temporada)
     cacheado = _leer_cache(clave_cache)
     if cacheado is not None:
-        print(f"[Cache] HIT para {clave_cache}")
+        print("[Debug] Devolviendo desde CACHÉ")
         return cacheado
 
-
-
-
-
-    # --- 0. Comprobar temporada ---
+    # Temporada
     mes_actual = date.today().month
     meses_especie = especie.get("meses", [])
     en_temporada = (not meses_especie) or (mes_actual in meses_especie)
@@ -199,45 +204,41 @@ async def consulta(c: Consulta):
             "especie_nombre": especie["nombre"],
         }
 
-    # --- 1. Polígonos de CORINE en el radio ---
+    # CORINE
+    print("[Debug] Pasando a CORINE...")
     poligonos = obtener_poligonos(centro[0], centro[1], RADIO_KM)
+    print(f"[Debug] CORINE devolvió {len(poligonos)} polígonos")
+    
     if not poligonos:
         return {
-            "centro": centro,
-            "especie_principal": c.especie_principal,
+            "centro": centro, "especie_principal": c.especie_principal,
             "geojson": {"type": "FeatureCollection", "features": []},
-            "resumen": (
-                f"Para la zona {zona_txt} y la especie {especie['nombre']}: "
-                f"no se han encontrado polígonos de CORINE en un radio de "
-                f"{int(RADIO_KM)} km. Recuerda que estos datos son orientativos."
-            ),
+            "resumen": f"Para la zona {zona_txt} no se han encontrado polígonos de CORINE.",
         }
 
-    # --- 2. Filtrar por hábitat compatible ---
+    # Filtrar por hábitat
     habitats_especie = set(especie["habitats"])
     poligonos_validos = [p for p in poligonos if p["habitat"] in habitats_especie]
+    print(f"[Debug] Polígonos válidos por hábitat: {len(poligonos_validos)}")
 
     if not poligonos_validos:
-        habitats_txt = ", ".join(especie["habitats"])
         return {
-            "centro": centro,
-            "especie_principal": c.especie_principal,
+            "centro": centro, "especie_principal": c.especie_principal,
             "geojson": {"type": "FeatureCollection", "features": []},
-            "resumen": (
-                f"Para la zona {zona_txt} y la especie {especie['nombre']}: "
-                f"no se han encontrado polígonos con el hábitat adecuado "
-                f"({habitats_txt}) en un radio de {int(RADIO_KM)} km. "
-                "Recuerda que estos datos son orientativos."
-            ),
+            "resumen": f"Para la zona {zona_txt} no se han encontrado polígonos con el hábitat adecuado.",
         }
 
-    # --- 3. Agrupar por celda de meteo (~5 km) ---
+    # Agrupar por celdas de meteo
     celdas = defaultdict(list)
     for p in poligonos_validos:
         celdas[_celda_meteo(p["lat"], p["lng"])].append(p)
 
-    # --- 4. Pedir meteo real (caché + semáforo a 1 por el free tier) ---
-    # --- 4. Pedir meteo real en una sola petición (agrupando coordenadas) ---
+    METEO_NEUTRO = {
+        "lluvia_60d": 120.0, "lluvia_20d": 40.0, "dias_lluvia_20d": 6,
+        "t_min_media": 8.0, "t_max_media": 18.0, "heladas_fuertes": False, "elevation": None,
+    }
+
+    # Pedir meteo
     coordenadas = list(celdas.keys())
     try:
         meteo_por_celda = await obtener_meteo_multiple(coordenadas)
@@ -245,47 +246,10 @@ async def consulta(c: Consulta):
         print(f"[Main] Fallo meteo múltiple: {e}")
         meteo_por_celda = {}
 
-    # Fallback neutro para celdas que falten
-    METEO_NEUTRO = {
-        "lluvia_60d": 120.0,
-        "lluvia_20d": 40.0,
-        "dias_lluvia_20d": 6,
-        "t_min_media": 8.0,
-        "t_max_media": 18.0,
-        "heladas_fuertes": False,
-        "elevation": None,
-    }
-
-    # Obtener geología por celda (con caché)
-    semaforo_geo = asyncio.Semaphore(5)
-
-    async def geo_celda(clave):
-        async with semaforo_geo:
-            try:
-                return clave, await obtener_geologia(clave[0], clave[1])
-            except Exception as e:
-                print(f"[Main] Fallo geologia para {clave}: {e}")
-                return clave, None
-
-    resultados_geo = await asyncio.gather(*[geo_celda(k) for k in celdas.keys()])
-    geologia_por_celda = dict(resultados_geo)
-
-    # Obtener orientación por celda (con caché)
-    semaforo_orient = asyncio.Semaphore(5)
-
-    async def orient_celda(clave):
-        async with semaforo_orient:
-            try:
-                return clave, await obtener_orientacion(clave[0], clave[1])
-            except Exception as e:
-                print(f"[Main] Fallo orientación para {clave}: {e}")
-                return clave, None
-
-    resultados_orient = await asyncio.gather(*[orient_celda(k) for k in celdas.keys()])
-    orientacion_por_celda = dict(resultados_orient)
-
-    # --- 5. Puntuar cada polígono ---
+    # Primer bucle: puntuar SOLO especie principal
+    print("[Debug] Pasando al bucle de scoring...")
     features = []
+    meteos_guardados = {}
     alt_lo, alt_hi = especie["altitud"]
 
     for p in poligonos_validos:
@@ -296,37 +260,19 @@ async def consulta(c: Consulta):
         altitud = meteo.get("elevation")
         altitud_ok = (altitud is None) or (alt_lo <= altitud <= alt_hi)
 
-        geologia = geologia_por_celda.get(_celda_meteo(p["lat"], p["lng"]))
-        orientacion = orientacion_por_celda.get(_celda_meteo(p["lat"], p["lng"]))
-
-        # Puntuar la especie principal (para el filtro de favorables)
-        res_principal = puntuar_especie(especie, meteo, True, altitud_ok, mes_actual, geologia, orientacion)
+        res_principal = puntuar_especie(especie, meteo, True, altitud_ok, mes_actual, None, None)
+        
         if res_principal["score"] < UMBRAL_FAVORABLE:
             continue
 
-        # Calcular las 5 mejores especies para este polígono
-        scores_especies = []
-        for eid, e in ESPECIES.items():
-            if p["habitat"] not in e.get("habitats", []):
-                continue
-            meses_e = e.get("meses", [])
-            if meses_e and mes_actual not in meses_e:
-                continue  # fuera de temporada, no la puntuamos
-            alt_lo_e, alt_hi_e = e["altitud"]
-            alt_ok_e = (altitud is None) or (alt_lo_e <= altitud <= alt_hi_e)
-            r = puntuar_especie(e, meteo, True, alt_ok_e, mes_actual, geologia, orientacion)
-            scores_especies.append({
-                "nombre": e["nombre"],
-                "score": r["score"],
-                "color": etiqueta(r["score"]),
-            })
-        scores_especies.sort(key=lambda x: x["score"], reverse=True)
-        top5 = scores_especies[:5]
+        fid = f"{p['clc_code']}_{p['lat']}_{p['lng']}"
+        meteos_guardados[fid] = meteo
 
         features.append({
             "type": "Feature",
             "geometry": p["geometry"].__geo_interface__,
             "properties": {
+                "fid": fid,
                 "prob": res_principal["score"],
                 "color": etiqueta(res_principal["score"]),
                 "habitat": p["habitat"],
@@ -338,75 +284,106 @@ async def consulta(c: Consulta):
                 "dias_lluvia_20d": meteo["dias_lluvia_20d"],
                 "t_min_media": meteo["t_min_media"],
                 "heladas_fuertes": meteo["heladas_fuertes"],
-                "geologia": geologia,
-                "orientacion": orientacion,
-                "top_especies": top5,
+                "geologia": None,
+                "orientacion": None,
+                "top_especies": [],
+                "lat": p["lat"],
+                "lng": p["lng"],
             },
         })
 
-    # --- 6. Ordenar y limitar ---
-    
+    # Ordenar y limitar
     features.sort(key=lambda f: f["properties"]["prob"], reverse=True)
     features = features[:MAX_POLIGONOS]
+    print(f"[Debug] Polígonos que pasan el filtro: {len(features)}")
 
-    # --- 7. Resumen con LLM o plantilla ---
+    # Segundo bucle: geología, orientación y top-5 EN PARALELO
+    print("[Debug] Calculando geología y orientación para los polígonos finales...")
+    
+    semaforo_geo = asyncio.Semaphore(10)
+    semaforo_orient = asyncio.Semaphore(10)
+
+    async def procesar_feature(f):
+        p = f["properties"]
+        fid = p["fid"]
+        meteo = meteos_guardados.get(fid, METEO_NEUTRO)
+        lat = p["lat"]
+        lng = p["lng"]
+
+        async with semaforo_geo:
+            try:
+                geologia = await obtener_geologia(lat, lng)
+            except Exception:
+                geologia = "mixto"
+                
+        async with semaforo_orient:
+            try:
+                orientacion = await obtener_orientacion(lat, lng)
+            except Exception:
+                orientacion = "plano"
+
+        p["geologia"] = geologia
+        p["orientacion"] = orientacion
+
+        res_final = puntuar_especie(especie, meteo, True, True, mes_actual, geologia, orientacion)
+        p["prob"] = res_final["score"]
+        p["color"] = etiqueta(res_final["score"])
+        p["motivo"] = res_final["motivo"]
+
+        scores_especies = []
+        for eid, e in ESPECIES.items():
+            if p["habitat"] not in e.get("habitats", []):
+                continue
+            meses_e = e.get("meses", [])
+            if meses_e and mes_actual not in meses_e:
+                continue
+            
+            alt_lo_e, alt_hi_e = e["altitud"]
+            alt_ok_e = (p["altitud"] is None) or (alt_lo_e <= p["altitud"] <= alt_hi_e)
+            
+            r = puntuar_especie(e, meteo, True, alt_ok_e, mes_actual, geologia, orientacion)
+            scores_especies.append({
+                "nombre": e["nombre"],
+                "score": r["score"],
+                "color": etiqueta(r["score"]),
+            })
+        
+        scores_especies.sort(key=lambda x: x["score"], reverse=True)
+        p["top_especies"] = scores_especies[:5]
+        
+        del p["fid"]
+        del p["lat"]
+        del p["lng"]
+
+        # Lanzamos todas las tareas, pero con un límite global de 4 segundos
+    tareas = [procesar_feature(f) for f in features]
+    try:
+        await asyncio.wait_for(asyncio.gather(*tareas), timeout=2.5)
+    except asyncio.TimeoutError:
+        print("[Main] Timeout global: algunas geologías/orientaciones no han respondido a tiempo")
+    
+    # Reordenamos
+    features.sort(key=lambda f: f["properties"]["prob"], reverse=True)
+
+    # Resumen
     if features:
         mejor = features[0]["properties"]
         resumen = await generar_resumen_con_llm(
-            especie_nombre=especie["nombre"],
-            zona_txt=zona_txt,
-            num_zonas=len(features),
-            radio_km=RADIO_KM,
-            mejor_habitat=mejor["habitat"],
-            mejor_color=mejor["color"],
-            mejor_prob=mejor["prob"],
-            mejor_motivo=mejor["motivo"],
-            fuera_de_temporada=not en_temporada,
-            meses_especie=meses_especie,
-            ia_activa=IA_ACTIVA,
+            especie_nombre=especie["nombre"], zona_txt=zona_txt, num_zonas=len(features),
+            radio_km=RADIO_KM, mejor_habitat=mejor["habitat"], mejor_color=mejor["color"],
+            mejor_prob=mejor["prob"], mejor_motivo=mejor["motivo"],
+            fuera_de_temporada=not en_temporada, meses_especie=meses_especie, ia_activa=IA_ACTIVA,
         )
         if resumen is None:
             resumen = generar_resumen_plantilla(
-                especie_nombre=especie["nombre"],
-                zona_txt=zona_txt,
-                num_zonas=len(features),
-                radio_km=RADIO_KM,
-                mejor_habitat=mejor["habitat"],
-                mejor_color=mejor["color"],
-                mejor_prob=mejor["prob"],
-                mejor_motivo=mejor["motivo"],
-                fuera_de_temporada=not en_temporada,
-                geologia=mejor.get("geologia"),
-            )       
-    else:
-        resumen = await generar_resumen_con_llm(
-            especie_nombre=especie["nombre"],
-            zona_txt=zona_txt,
-            num_zonas=0,
-            radio_km=RADIO_KM,
-            mejor_habitat="",
-            mejor_color="",
-            mejor_prob=0.0,
-            mejor_motivo="",
-            fuera_de_temporada=not en_temporada,
-            meses_especie=meses_especie,
-            ia_activa=IA_ACTIVA,            
-        )
-        if resumen is None:
-            resumen = generar_resumen_plantilla(
-                especie_nombre=especie["nombre"],
-                zona_txt=zona_txt,
-                num_zonas=0,
-                radio_km=RADIO_KM,
-                mejor_habitat="",
-                mejor_color="",
-                mejor_prob=0.0,
-                mejor_motivo="",
-                fuera_de_temporada=not en_temporada,
-                geologia=None,
+                especie_nombre=especie["nombre"], zona_txt=zona_txt, num_zonas=len(features),
+                radio_km=RADIO_KM, mejor_habitat=mejor["habitat"], mejor_color=mejor["color"],
+                mejor_prob=mejor["prob"], mejor_motivo=mejor["motivo"],
+                fuera_de_temporada=not en_temporada, geologia=mejor.get("geologia"),
             )
-       
-    # --- 8. Añadir especies que comparten hábitat y están en temporada ---
+    else:
+        resumen = f"Para la zona {zona_txt} y la especie {especie['nombre']}: no se han encontrado zonas con condiciones suficientemente favorables."
+
     otras = _especies_comparten_habitat(c.especie_principal, mes_actual)
     if otras:
         otras_txt = ", ".join(otras[:5])
@@ -414,15 +391,13 @@ async def consulta(c: Consulta):
             otras_txt += f" y {len(otras) - 5} más"
         resumen += f" Otras especies que comparten hábitat y están en temporada: {otras_txt}."
 
-     
-
     respuesta = {
-        "centro": centro,
-        "especie_principal": c.especie_principal,
-        "geojson": {"type": "FeatureCollection", "features": features},
-        "resumen": resumen,
+        "centro": centro, "especie_principal": c.especie_principal,
+        "geojson": {"type": "FeatureCollection", "features": features}, "resumen": resumen,
     }
     _escribir_cache(clave_cache, respuesta)
+    print(f"[Timing] Consulta TOTAL tardó: {time.time() - t_inicio:.2f}s")
+    print("[Debug] --- FIN CONSULTA ---\n")
     return respuesta
 
 @app.get("/api/tiles/tracestrack/{z}/{x}/{y}.png")

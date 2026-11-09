@@ -107,7 +107,7 @@ def obtener_habitat(lat: float, lng: float) -> dict:
         CLC_PATH, layer=CLC_LAYER,
         bbox=_bbox_en_utm(lat, lng),
         columns=["CODE_18", "AREA_HA", "geometry"],
-        use_arrow=True,
+        use_arrow=True,  # eliminar esta línea
     )
     if gdf.empty:
         return {"habitat": "desconocido", "clc_code": None, "area_ha": None}
@@ -134,7 +134,7 @@ def obtener_poligonos(lat: float, lng: float, radio_km: float = 15.0) -> list[di
         CLC_PATH, layer=CLC_LAYER,
         bbox=_bbox_en_utm(lat, lng, radio_m),
         columns=["CODE_18", "AREA_HA", "geometry"],
-        use_arrow=True,
+        #use_arrow=True, línea eliminada
     )
     if gdf.empty:
         return []
